@@ -14,7 +14,7 @@ class Kernel extends ConsoleKernel
      * @var array
      */
     protected $commands = [
-
+        \App\Console\Commands\FetchUndesirableAffiliates::class,
     ];
 
     /**
@@ -25,8 +25,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-//        $schedule->command('initial_metrics:calculate')
-//            ->everyMonth();
+        $schedule->command('undesirable_affiliates:fetch')->daily();
     }
 
     /**

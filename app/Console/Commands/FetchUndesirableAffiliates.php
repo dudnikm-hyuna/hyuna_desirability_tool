@@ -1,33 +1,49 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Console\Commands;
 
-use Illuminate\Http\Request;
+use Illuminate\Console\Command;
 use App\Affiliate;
 use Illuminate\Support\Facades\DB;
 use App\UndesirableAffiliate;
 use App\PriceProgram;
 use App\WorkoutProgram;
 
-class HomeController extends Controller
+class FetchUndesirableAffiliates extends Command
 {
     /**
-     * Create a new controller instance.
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'undesirable_affiliates:fetch';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Fetch undesirable affiliates';
+
+    /**
+     * Create a new command instance.
      *
      * @return void
      */
     public function __construct()
     {
-        $this->middleware('auth');
+        parent::__construct();
     }
 
     /**
-     * Show the application dashboard.
+     * Execute the console command.
      *
-     * @return \Illuminate\Http\Response
+     * @return mixed
      */
-    public function index()
+    public function handle()
     {
+        $this->info('Fetching affiliates IDs registered more then 126 ago');
+
         $affiliate_ids = Affiliate::findAffiliatesIdForReview();
 
         $query = "SELECT    affiliate_id,
@@ -83,7 +99,7 @@ class HomeController extends Controller
 
         }
 
-        return view('home');
+        $this->info('Cron successfully done!');
     }
 
     private static function prepareUndesirableAffiliateData($metrics)
@@ -121,9 +137,10 @@ class HomeController extends Controller
 
         } elseif ($affiliate->is_active == '1') { //todo logic
             $affiliate->is_active = '0';
+            $affiliate->save();
         }
 
-
+        return true;
     }
 
     private static function calculateAffiliateSize($total_cost)

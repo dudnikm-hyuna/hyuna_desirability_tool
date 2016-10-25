@@ -18,10 +18,3 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->describe('Display an inspiring quote');
 
-Artisan::command('initial:calculate', function () {
-    $initialMetrict = new InitialMetric();
-    $initialMetrict->total_cost = 10;
-    $initialMetrict->save();
-})->describe('Display an inspiring quote');
-
-

@@ -11,15 +11,22 @@ class Affiliate extends Model
      *
      * @var string
      */
-    protected $connection = 'local';
-    
-     /**
+    protected $connection = 'staging';
+
+    /**
      * The table associated with the model.
      *
      * @var string
      */
-    protected $table = 'undesirable_affiliates';
+    protected $table = 'affiliates';
 
-    protected $fillable = ['desirability_score'];
+    public static function findAffiliatesIdForReview()
+    {
+        $affiliate_ids = Affiliate::where('date_added', '<', strtotime("-126 days"))
+            ->whereIn('status', ['active', 'suspended'])
+            ->pluck('id')
+            ->toArray();
 
+        return implode(",", $affiliate_ids);
+    }
 }

@@ -4,7 +4,7 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 
-class InitialMetric extends Model
+class WorkoutProgram extends Model
 {
     /**
      * The connection name for the model.
@@ -18,6 +18,5 @@ class InitialMetric extends Model
      *
      * @var string
      */
-    protected $table = 'initial_metrics';
-
+    protected $table = 'workout_programs';
 }

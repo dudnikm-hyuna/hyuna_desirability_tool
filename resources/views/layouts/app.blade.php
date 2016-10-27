@@ -101,18 +101,18 @@
                 {"data": "affiliate_type"},
                 {"data": "affiliate_size"},
                 {"data": "date_added"},
-                {"data": "reviwed_date"},
-                {"data": "affiliate_price"},
-                {"data": "total_sales_126"},
-                {"data": "total_cost_126"},
-                {"data": "gross_margin_126"},
-                {"data": "num_disputes_126"},
-                {"data": "desirability_score"},
-                {"data": "workout_program_id", "className": "wp-id"},
-                {"data": "updated_price_name"},
-                {"data": "updated_price"},
-                {"data": "workout_duration"},
-                {"data": "workout_set_date"},
+                {"data": "reviwed_date", "className": "reviwed_date"},
+                {"data": "affiliate_price", "className": "affiliate_price"},
+                {"data": "total_sales_126", "className": "total_sales_126"},
+                {"data": "total_cost_126", "className": "total_cost_126"},
+                {"data": "gross_margin_126", "className": "gross_margin_126"},
+                {"data": "num_disputes_126", "className": "num_disputes_126"},
+                {"data": "desirability_score", "className": "desirability_score"},
+                {"data": "workout_program_id", "className": "workout_program_id"},
+                {"data": "updated_price_name", "className": "updated_price_name"},
+                {"data": "updated_price", "className": "updated_price"},
+                {"data": "workout_duration", "className": "workout_duration"},
+                {"data": "workout_set_date", "className": "workout_set_date"},
                 {"data": "in_program"},
             ],
             "columnDefs": [
@@ -126,7 +126,6 @@
                     "render": function (data, type, row) {
                         var button = data + ' <span data-affiliate-id="' + row.affiliate_id + '" class="btn-history glyphicon glyphicon-header" data-toggle="tooltip" title="Show history"></span>';
 
-                        console.log(data);
                         return (data) ? button : '';
                     },
                     "targets": 0
@@ -164,7 +163,6 @@
             var id = $(this).attr('data-affiliate-id');
             var tr = $(this).closest( "tr" );
 
-            tr.children().css('vertical-align','text-top').append( "<p>Test</p>" );
 
             $.ajax({
                         method: "GET",
@@ -181,6 +179,17 @@
         });
 
         function showUndesirableAffiliateHistory(history, tr) {
+
+            var tr_index = table.row(tr).index();
+
+            history.forEach(function(e){
+                for (var i = 7; i <=18; i++) {
+                    table.cell( tr_index, i).data( 'Updated' + i ).draw();
+                }
+            });
+
+
+
 //                var count = 0;
 //                var currentPage = table.page();
 //

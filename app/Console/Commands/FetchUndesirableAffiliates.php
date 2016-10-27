@@ -74,7 +74,7 @@ class FetchUndesirableAffiliates extends Command
                         WHERE issue_date >= :start_time AND stats_t.site_id <> 813 AND affiliate_id <> 0 AND affiliate_id IN (" . $affiliate_ids . ") AND affiliate_id = '63935'
                       GROUP BY stats_m.member_id
                 ) stats ON m.member_id = stats.member_id
-                GROUP BY affiliate_id";
+                GROUP BY affiliate_id"; //todo set appropriate filters and params
 
         $params = array(
             ":start_time" => strtotime("-4336 days"), //todo change to  -126 or -156
@@ -87,14 +87,14 @@ class FetchUndesirableAffiliates extends Command
 
         foreach ($affiliates_initial_metrics as $metrics) {
             if ($undesirable_affiliate = UndesirableAffiliate::where('affiliate_id', $metrics->affiliate_id)->first()) {
-                static::updateUndesirableAffiliate($undesirable_affiliate);
+                print_r('Undesirable affiliate is exist and should be updated: id' . $metrics->affiliate_id . "\n");
+                static::updateUndesirableAffiliate($undesirable_affiliate, $metrics);
             } else {
-                if (static::calculateDesirabilityScore($metrics) > 0 && $metrics->total_cost >= 1500) {
+                if (static::calculateDesirabilityScore($metrics) > 0 && $metrics->total_cost >= 1500) { //todo change to total_cost<150
                     continue;
-                } //todo change to total_cost<150
-
-                $data = static::prepareUndesirableAffiliateData($metrics);
-                $undesirable_affiliate = UndesirableAffiliate::create($data);
+                }
+                print_r('Undesirable affiliate not exist and should be created: id' . $metrics->affiliate_id . "\n");
+                $undesirable_affiliate = static::createUndesirableAffiliate($metrics);
             }
 
         }
@@ -102,6 +102,57 @@ class FetchUndesirableAffiliates extends Command
         $this->info('Cron successfully done!');
     }
 
+    public static function createUndesirableAffiliate($metrics)
+    {
+        print_r('Create new undesirable affiliate' . "\n");
+        $data = static::prepareUndesirableAffiliateData($metrics);
+        return UndesirableAffiliate::create($data);
+    }
+
+    /**
+     * @param $affiliate
+     * @param $metrics
+     * @return bool
+     */
+    public static function updateUndesirableAffiliate($affiliate, $metrics) //($affiliate, $workout_program_id, $price_program_id)
+    {
+        if ($affiliate->workout_program_id == 1 ||
+            $affiliate->workout_program_id == 2 &&
+            $affiliate->is_active == '1'
+        ) {
+            print_r('Undesirable affiliate in workout programs 1 and 2: id' . $metrics->affiliate_id . "\n");
+            print_r('Save new data in history: id' . "\n");
+            $affiliate_to_history = $affiliate->replicate();
+            $affiliate_to_history->is_active = '0';
+            $affiliate_to_history->save();
+
+        } elseif ($affiliate->is_active == '1' && $affiliate->in_program == '1') { //todo logic
+            print_r('Undesirable affiliate is in program: id' . $metrics->affiliate_id . "\n");
+            print_r('Save old data in history and create new: id' . "\n");
+            $affiliate->is_active = '0';
+            $affiliate->save();
+
+            $undesirable_affiliate = static::createUndesirableAffiliate($metrics);
+        } elseif ($affiliate->is_active == '1' && $affiliate->in_program == '0') {
+            print_r('Undesirable affiliate is not in program: id' . $metrics->affiliate_id . "\n");
+            print_r('Update data' . "\n");
+            print_r($affiliate->id . "\n");
+            print_r($metrics . "\n");die();
+
+            $data = static::prepareUndesirableAffiliateData($metrics);
+
+
+            $undesirable_affiliate = UndesirableAffiliate::find($affiliate->id)->update($data);
+        }
+
+        return true;
+    }
+
+
+    /**
+     * @param $metrics
+     * @return array
+     */
     private static function prepareUndesirableAffiliateData($metrics)
     {
         $affiliate = Affiliate::find($metrics->affiliate_id);
@@ -128,21 +179,10 @@ class FetchUndesirableAffiliates extends Command
         return $data;
     }
 
-    public function updateUndesirableAffiliate($affiliate) //($affiliate, $workout_program_id, $price_program_id)
-    {
-        if ($affiliate->workout_program_id == 1 || $affiliate->workout_program_id == 2) {
-            $affiliate_to_history = $affiliate->replicate();
-            $affiliate_to_history->is_active = '0';
-            $affiliate_to_history->save();
-
-        } elseif ($affiliate->is_active == '1') { //todo logic
-            $affiliate->is_active = '0';
-            $affiliate->save();
-        }
-
-        return true;
-    }
-
+    /**
+     * @param $total_cost
+     * @return string
+     */
     private static function calculateAffiliateSize($total_cost)
     {
         if ($total_cost >= 100000) {
@@ -158,6 +198,10 @@ class FetchUndesirableAffiliates extends Command
         }
     }
 
+    /**
+     * @param $metrics
+     * @return float|int
+     */
     private static function calculateDesirabilityScore(&$metrics)
     {
         $min_gm = 0.35;
@@ -185,6 +229,10 @@ class FetchUndesirableAffiliates extends Command
         return $score;
     }
 
+    /**
+     * @param $metrics
+     * @return float
+     */
     private static function calculateGrossMargin($metrics)
     {
         $processing_cost = static::calculateProcessingCost($metrics->num_transactions, $metrics->num_disputes);

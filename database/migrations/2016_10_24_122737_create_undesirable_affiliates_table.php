@@ -21,8 +21,8 @@ class CreateUndesirableAffiliatesTable extends Migration
             $table->string('country_code', 2);
             $table->string('affiliate_type', 32);
             $table->string('affiliate_size', 5);
-            $table->integer('date_added');
-            $table->integer('reviwed_date');
+            $table->date('date_added');
+            $table->date('review_date');
             $table->integer('affiliate_price');
             $table->integer('total_sales_126');
             $table->integer('total_cost_126');

@@ -166,7 +166,7 @@ class FetchUndesirableAffiliates extends Command
             'affiliate_type' => $affiliate->affiliate_type,
             'affiliate_size' => static::calculateAffiliateSize($metrics->total_cost),
             'date_added' => $affiliate->date_added,
-            'reviwed_date' => time(),
+            'review_date' => date("Y-m-d H:i:s"),
             'affiliate_price' => $price_program->price,
             'total_sales_126' => $metrics->total_sales_126,
             'total_cost_126' => $metrics->total_cost_126,

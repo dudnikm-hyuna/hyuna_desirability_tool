@@ -157,7 +157,6 @@ class HomeController extends Controller
                 print_r('Undesirable affiliate ' . $metrics->affiliate_id . ' is in program ' . "\n");
                 print_r('Save old data in history and create new: id' . "\n");
 
-                //todo change prepareUndesirableAffiliateData (...,program_id, workout_id)
 
 //                $metrics->desirability_score = -6; //todo delete it`s for test
 //                $metrics->gross_margin_126 = 0.23; //todo delete it`s for test
@@ -203,8 +202,8 @@ class HomeController extends Controller
             'country_code' => $affiliate->country_code,
             'affiliate_type' => $affiliate->affiliate_type,
             'affiliate_size' => static::calculateAffiliateSize($metrics->total_cost),
-            'date_added' => $affiliate->date_added,
-            'reviwed_date' => date("Y-m-d"),
+            'date_added' => date("Y-m-d H:i:s", $affiliate->date_added),
+            'review_date' => date("Y-m-d H:i:s"),
             'affiliate_price' => $price_program->price,
             'total_sales_126' => $metrics->total_sales_126,
             'total_cost_126' => $metrics->total_cost_126,

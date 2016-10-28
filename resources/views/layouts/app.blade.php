@@ -101,7 +101,7 @@
                 {"data": "affiliate_type"},
                 {"data": "affiliate_size"},
                 {"data": "date_added"},
-                {"data": "reviwed_date", "className": "reviwed_date"},
+                {"data": "review_date", "className": "review_date"},
                 {"data": "affiliate_price", "className": "affiliate_price"},
                 {"data": "total_sales_126", "className": "total_sales_126"},
                 {"data": "total_cost_126", "className": "total_cost_126"},
@@ -116,9 +116,10 @@
                 {"data": "in_program"},
             ],
             "columnDefs": [
+
                 {
                     "render": function (data, type, row) {
-                        return data + ' <span data-affiliate-id="' + row.affiliate_id + '" class="btn-history glyphicon glyphicon-header" data-toggle="tooltip" title="Show history"></span>';
+                        return '<span class="cell-data-container">' + data + ' <span data-affiliate-id="' + row.affiliate_id + '" class="btn-history glyphicon glyphicon-header" data-toggle="tooltip" title="Show history"></span></span>';
                     },
                     "targets": 0
                 },
@@ -137,14 +138,14 @@
                         var wp_id;
                         for (wp_id = 0; wp_id < 3; wp_id++) {
                             var is_selected = (wp_id == data) ? 'selected' : '';
-                            options += '<option ' + is_selected + ' value="' + wp_id + '">' + wp_id + '</option>';
+                            options += '<option class="' + selectWPColor(wp_id) + '" ' + is_selected + ' value="' + wp_id + '">' + wp_id + '</option>';
                         }
 
-                        var select_template = '<div class="wp-list-container">' +
-                                '<select name="wp-list" id="" class="wp-list">'
+                        var select_template = '<span class="cell-data-container">' +
+                                '<select name="wp-list" class="wp-list ">'
                                 + options +
                                 '</select>' +
-                                '</div>';
+                                '</span>';
 
                         return select_template;
                     },
@@ -152,16 +153,28 @@
                 },
                 {
                     "render": function (data, type, row) {
-                        return (data == 1) ? 'in program' : ' set program';
+                        var data = (data == 1) ? 'in program' : ' set program';
+
+                        return '<span class="cell-data-container">' + data + '</span>';
                     },
                     "targets": 19
+                },
+                {
+                    "render": function (data, type, row) {
+                        return '<span class="cell-data-container">' + data + '</span>';
+                    },
+                    "targets": '_all'
                 }
-            ]
+            ],
+            "fnRowCallback": function( nRow, aData, iDisplayIndex, iDisplayIndexFull ) {
+                var id = aData["workout_program_id"];
+                $('td:eq(14) .cell-data-container', nRow).addClass("wp_" + id);
+            }
         });
 
         $('#undesirable_affiliates tbody').on('click', '.btn-history', function () {
             var id = $(this).attr('data-affiliate-id');
-            var tr = $(this).closest( "tr" );
+            var tr = $(this).closest("tr");
 
 
             $.ajax({
@@ -169,7 +182,7 @@
                         url: '{{ url("undesirable-affiliates-history-data") }}' + '/' + id,
                     })
                     .done(function (history) {
-                        if(history.data.length  == 0) {
+                        if (history.data.length == 0) {
                             alert('History not exist');
                             return false;
                         }
@@ -179,60 +192,34 @@
         });
 
         function showUndesirableAffiliateHistory(history, tr) {
-
-            var tr_index = table.row(tr).index();
-
-            history.forEach(function(e){
-                for (var i = 7; i <=18; i++) {
-                    table.cell( tr_index, i).data( 'Updated' + i ).draw();
-                }
+            console.log(tr);
+            history.forEach(function (e) {
+                $.each(e, function( key, value ) {
+                    var td = tr.find('td.' + key);
+                    var wp_class = ( key == 'workout_program_id') ? "wp_" + value : ""; // background color for workout program
+                    if (td.length !== 0) {
+                        td.append('<span class="cell-data-container ' + wp_class + '">' + value + '</span>');
+                    }
+                });
             });
+        }
 
+        function selectWPColor(wp_id) {
+            switch (wp_id) {
+                case 0:
+                    wp_color = "wp_0";
+                    break;
+                case 1:
+                    wp_color = "wp_1";
+                    break;
+                case 2:
+                    wp_color = "wp_2";
+                    break;
+                case 3:
+                    wp_color = "wp_3";
+            }
 
-
-//                var count = 0;
-//                var currentPage = table.page();
-//
-//                //insert a test row
-//                count++;
-//
-//                table.row.add({
-//                            "affiliate_name": "",
-//                            "affiliate_id": "",
-//                            "affiliate_status": "",
-//                            "country_code": "",
-//                            "affiliate_type": "",
-//                            "affiliate_size": "",
-//                            "date_added": "",
-//                            "reviwed_date": "test",
-//                            "affiliate_price": "test",
-//                            "total_sales_126": "test",
-//                            "total_cost_126": "test",
-//                            "gross_margin_126": "test",
-//                            "num_disputes_126": "test",
-//                            "desirability_score": "test",
-//                            "workout_program_id": "test",
-//                            "updated_price_name": "test",
-//                            "updated_price": "test",
-//                            "workout_duration": "test",
-//                            "workout_set_date": "test",
-//                            "in_program": "test"
-//                        }).draw();
-//
-//                var index = table.row(tr).index(),
-//                        rowCount = table.data().length-1,
-//                        insertedRow = table.row(rowCount).data(),
-//                        tempRow;
-//
-//
-//                for (var i=rowCount;i>index;i--) {
-//                    tempRow = table.row(i-1).data();
-//                    table.row(i).data(tempRow);
-//                    table.row(i-1).data(insertedRow);
-//                }
-//                //refresh the page
-//                table.page(currentPage).draw(false);
-
+            return wp_color;
         }
     });
 </script>

@@ -25,6 +25,8 @@
                 <th>Workout duration</th>
                 <th>WP Set Date</th>
                 <th>Program status</th>
+                <th>Id</th>
+                <th>Email</th>
             </tr>
             </thead>
         </table>

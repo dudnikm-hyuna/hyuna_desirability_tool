@@ -83,7 +83,44 @@
     </nav>
 
     @yield('content')
-</div>
+
+    <!-- Change Workout Program Modal -->
+    <div class="modal fade" id="wp-modal" tabindex="-1" role="dialog" aria-labelledby="wp-modal">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="wp-modal-label">Change Workout program</h4>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to change Workout program?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">No</button>
+                    <button type="button" class="btn btn-primary" id="wp-change-confirm">Yes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Send Email Modal -->
+    <div class="modal fade" id="send-email-modal" tabindex="-1" role="dialog" aria-labelledby="send-email-modal">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="send-email-label">Send email to affiliate</h4>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to send email?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">No</button>
+                    <button type="button" class="btn btn-primary" id="send-email-confirm">Yes</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
 <!-- Scripts -->
 
@@ -93,6 +130,8 @@
     $(document).ready(function () {
         var table = $('#undesirable_affiliates').DataTable({
             ajax: '{{ url("undesirable-affiliates-data") }}',
+            "paging": false,
+//            "aaSorting": [],
             "columns": [
                 {"data": "affiliate_name", "className": "affiliate-name"},
                 {"data": "affiliate_id"},
@@ -114,34 +153,33 @@
                 {"data": "workout_duration", "className": "workout_duration"},
                 {"data": "workout_set_date", "className": "workout_set_date"},
                 {"data": "in_program"},
+                {"data": "id"},
+                {"data": "email_sent_date", "className": "email_sent_date"},
+                {"data": "email"}
             ],
             "columnDefs": [
-
                 {
                     "render": function (data, type, row) {
-                        return '<span class="cell-data-container">' + data + ' <span data-affiliate-id="' + row.affiliate_id + '" class="btn-history glyphicon glyphicon-header" data-toggle="tooltip" title="Show history"></span></span>';
+                        return '<span class="cell-data-container">' + data + ' ' +
+                                    '<span data-affiliate-id="' + row.affiliate_id + '"' +
+                                        'class="btn-history glyphicon glyphicon-header"' +
+                                        'data-toggle="tooltip" title="Show history">' +
+                                    '</span>' +
+                                    '<span class="btn-remove-history glyphicon glyphicon-remove"></span>' +
+                                '</span>';
                     },
                     "targets": 0
                 },
                 {
-                    "render": function (data, type, row) {
-                        var button = data + ' <span data-affiliate-id="' + row.affiliate_id + '" class="btn-history glyphicon glyphicon-header" data-toggle="tooltip" title="Show history"></span>';
-
-                        return (data) ? button : '';
-                    },
-                    "targets": 0
-                },
-                {
-
                     "render": function (data, type, row) {
                         var options = '';
                         var wp_id;
-                        for (wp_id = 0; wp_id < 3; wp_id++) {
+                        for (wp_id = 0; wp_id <= 3; wp_id++) {
                             var is_selected = (wp_id == data) ? 'selected' : '';
                             options += '<option class="' + selectWPColor(wp_id) + '" ' + is_selected + ' value="' + wp_id + '">' + wp_id + '</option>';
                         }
 
-                        var select_template = '<span class="cell-data-container">' +
+                        var select_template = '<span data-id=' + row.id + ' class="cell-data-container wp_' + row.workout_program_id + '">' +
                                 '<select name="wp-list" class="wp-list ">'
                                 + options +
                                 '</select>' +
@@ -161,21 +199,49 @@
                 },
                 {
                     "render": function (data, type, row) {
+                        var emailSentTime = Date.parse(data) || 0;
+
+                        if(!emailSentTime) {
+                            return '<span class="cell-data-container"><button data-id="' + row.id + ' " class="btn-send-email">Send email</button></span>';
+                        } else {
+                            var currentTime = Date.now();
+                            var pendingTime = +new Date(emailSentTime + 2*24*60*60*1000);
+
+                            if (currentTime <= pendingTime) {
+                                return '<span class="cell-data-container email-yellow">' + data + '</span>';
+                            } else {
+                                return '<span class="cell-data-container email-green">' + data + '</span>';
+                            }
+                        }
+
+                        return '<span class="cell-data-container">' + data + '</span>';
+                    },
+                    "targets": 21
+                },
+                {
+                    "render": function (data, type, row) {
                         return '<span class="cell-data-container">' + data + '</span>';
                     },
                     "targets": '_all'
-                }
-            ],
-            "fnRowCallback": function( nRow, aData, iDisplayIndex, iDisplayIndexFull ) {
-                var id = aData["workout_program_id"];
-                $('td:eq(14) .cell-data-container', nRow).addClass("wp_" + id);
-            }
+                },
+                { "visible": false, "targets": [20,22] }
+            ]
         });
 
         $('#undesirable_affiliates tbody').on('click', '.btn-history', function () {
             var id = $(this).attr('data-affiliate-id');
             var tr = $(this).closest("tr");
+            var btn_history = $(this);
+            var btn_remove_history = $(this).next();
+            var history_data = tr.find(".history-data");
 
+            if (history_data.length) {
+                btn_history.hide();
+                btn_remove_history.show();
+                history_data.show();
+
+                return true;
+            }
 
             $.ajax({
                         method: "GET",
@@ -186,22 +252,70 @@
                             alert('History not exist');
                             return false;
                         }
-
                         showUndesirableAffiliateHistory(history.data, tr);
+                        btn_history.hide();
+                        btn_remove_history.show();
                     });
         });
 
+        $('#undesirable_affiliates tbody').on('click', '.btn-remove-history', function () {
+            var tr = $(this).closest("tr");
+            var btn_remove_history = $(this);
+            var btn_history = $(this).prev();
+            var history_data = tr.find(".history-data");
+            history_data.hide();
+            btn_history.show();
+            btn_remove_history.hide();
+        });
+
+        $("#undesirable_affiliates").on("change",".wp-list", function(){
+            var wp_id = $(this).val();
+            var select_wrapper = $(this).parent(".cell-data-container");
+            var id = select_wrapper.attr("data-id");
+            var tr = select_wrapper.closest("tr");
+
+           tr.attr("data-id", id);
+
+            var wp_change_confirm_btn = $("#wp-change-confirm");
+            wp_change_confirm_btn.attr("data-id", id);
+            wp_change_confirm_btn.attr("data-wp-id", wp_id);
+
+            $('#wp-modal').modal('show');
+        });
+
+        $("#wp-change-confirm").on("click", function(){
+           var id = $(this).attr("data-id");
+           var wp_id = $(this).attr("data-wp-id");
+           var tr = $("#undesirable_affiliates").find("tr[data-id=" + id + "]");
+            console.log(id, wp_id, tr);
+
+            $.ajax({
+                method: "GET",
+                    url: '{{ url("update-undesirable-affiliate") }}' + '/' + id + '/' + wp_id,
+                })
+                .done(function (underisable_affiliate) {
+                    table.row(tr).data(underisable_affiliate);
+                    $('#wp-modal').modal('hide');
+            });
+        });
+
+        $("#undesirable_affiliates").on("click", ".btn-send-email", function(){
+            console.log('test');
+            $('#send-email-modal').modal('show');
+        });
+
         function showUndesirableAffiliateHistory(history, tr) {
-            console.log(tr);
             history.forEach(function (e) {
                 $.each(e, function( key, value ) {
                     var td = tr.find('td.' + key);
-                    var wp_class = ( key == 'workout_program_id') ? "wp_" + value : ""; // background color for workout program
+                    var wp_class = ( key == 'workout_program_id') ? "wp_" + value : ""; // background color for wp
                     if (td.length !== 0) {
-                        td.append('<span class="cell-data-container ' + wp_class + '">' + value + '</span>');
+                        td.append('<span class="cell-data-container history-data ' + wp_class + '">' + value + '</span>');
                     }
                 });
             });
+
+            return true;
         }
 
         function selectWPColor(wp_id) {

@@ -22,6 +22,9 @@ class HomeController extends Controller
         $this->middleware('auth');
     }
 
+    /**
+     * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+     */
     public function tool()
     {
         $workout_programs_amount = count(WorkoutProgram::all());
@@ -29,16 +32,20 @@ class HomeController extends Controller
         return view('tool', ['wp_amount' => $workout_programs_amount]);
     }
 
+    /**
+     * @return mixed
+     */
     public function getUndesirableAffiliatesData()
     {
         return Datatables::eloquent(UndesirableAffiliate::where(['is_active' => '1']))->make(true);
     }
 
+    /**
+     * @param $id
+     * @return mixed
+     */
     public function getUndesirableAffiliateHistoryData($id)
     {
-//        var_dump('test');die();
-
-
         return Datatables::eloquent(UndesirableAffiliate::where([
             'is_active' => '0',
             'affiliate_id' => $id
@@ -46,6 +53,9 @@ class HomeController extends Controller
     }
 
 
+    /**
+     *
+     */
     public function index()
     {
 //        $this->info('Fetching affiliates IDs registered more then 126 ago');
@@ -84,7 +94,7 @@ class HomeController extends Controller
                 GROUP BY affiliate_id"; //todo set appropriate filters and params
 
         $params = array(
-            ":start_time" => strtotime("-4336 days"), //todo change to  -126 or -156
+            ":start_time" => strtotime("-1156 days"), //todo change to  -126 or -156
             ":days_126" => 126 * 86400,
         );
 
@@ -95,15 +105,15 @@ class HomeController extends Controller
         foreach ($affiliates_initial_metrics as $metrics) {
             $undesirable_affiliate_rows_data = UndesirableAffiliate::where('affiliate_id', $metrics->affiliate_id)->get();
 
-            if(count($undesirable_affiliate_rows_data)) {
+            if (count($undesirable_affiliate_rows_data)) {
                 print_r('Undesirable affiliate is exist and should be updated: id' . $metrics->affiliate_id . "\n");
-                if (!$affiliate = Affiliate::find($metrics->affiliate_id)) {
+                if (!$affiliate = Affiliate::find($metrics->affiliate_id)) { //todo delete: check that affilaite is exist in jomedia2 staging
                     continue;
                 }
 
                 static::updateUndesirableAffiliate($undesirable_affiliate_rows_data, $metrics);
             } else {
-                if (!$affiliate = Affiliate::find($metrics->affiliate_id)) {
+                if (!$affiliate = Affiliate::find($metrics->affiliate_id)) { //todo delete: check that affilaite is exist in jomedia2 staging
                     continue;
                 }
 
@@ -112,7 +122,7 @@ class HomeController extends Controller
                 }
 
                 print_r('Undesirable affiliate not exist and should be created: id' . $metrics->affiliate_id . "\n");
-                $undesirable_affiliate = static::createUndesirableAffiliate($metrics, 0, 1);
+                $undesirable_affiliate = static::createUndesirableAffiliate($metrics, 0);
             }
         }
 
@@ -120,12 +130,17 @@ class HomeController extends Controller
         die();
     }
 
-    public static function createUndesirableAffiliate($metrics, $workout_program_id, $price_program_id)
+    /**
+     * @param $metrics
+     * @param $workout_program_id
+     * @return static
+     */
+    public static function createUndesirableAffiliate($metrics, $workout_program_id)
     {
         print_r('Create new undesirable affiliate' . "\n");
 
         static::calculateDesirabilityScore($metrics);
-        $data = static::prepareUndesirableAffiliateData($metrics, $workout_program_id, $price_program_id);
+        $data = static::prepareUndesirableAffiliateData($metrics, $workout_program_id);
         return UndesirableAffiliate::create($data);
     }
 
@@ -137,37 +152,28 @@ class HomeController extends Controller
     public static function updateUndesirableAffiliate($affiliate_rows_data, $metrics)
     {
         foreach ($affiliate_rows_data as $affiliate_row_data) {
-            if ($affiliate_row_data->workout_program_id == 1 ||
-                $affiliate_row_data->workout_program_id == 2 &&
-                $affiliate_row_data->is_active == '1'
-            ) {
-                print_r('Undesirable affiliate ' . $metrics->affiliate_id . ' in workout programs 1 or 2' . "\n");
-                print_r('Save new data in history: id' . "\n");
+            if (($affiliate_row_data->workout_program_id == 1 ||
+                    $affiliate_row_data->workout_program_id == 2) &&
+                $affiliate_row_data->is_active == '1' &&
+                $affiliate_row_data->in_program == '1'
 
-                $affiliate_row_data_to_history = $affiliate_row_data->replicate();
-                $affiliate_row_data_to_history->is_active = '0';
-                $affiliate_row_data_to_history->desirability_score = -1; //todo delete -- it`s for test
-                $affiliate_row_data_to_history->gross_margin_126 = 0.05; //todo delete -- it`s for test
-                $affiliate_row_data_to_history->save();
-
-            } elseif ($affiliate_row_data->is_active == '1' &&
-                $affiliate_row_data->in_program == '1' &&
-                $affiliate_row_data->workout_program_id > 2
             ) { //todo logic
-                print_r('Undesirable affiliate ' . $metrics->affiliate_id . ' is in program ' . "\n");
+//                print_r('Undesirable affiliate ' . $metrics->affiliate_id . ' is in program ' . "\n");
                 print_r('Save old data in history and create new: id' . "\n");
 
-
-//                $metrics->desirability_score = -6; //todo delete it`s for test
-//                $metrics->gross_margin_126 = 0.23; //todo delete it`s for test
-
-                $undesirable_affiliate = static::createUndesirableAffiliate($metrics, $affiliate_row_data->workout_program_id, 1); //todo select price program related workout program
+//                $metrics->desirability_score = -2; //todo delete it`s for test
+//                $metrics->gross_margin_126 = 0.13; //todo delete it`s for test
 
                 $affiliate_row_data->is_active = '0';
                 $affiliate_row_data->save();
-            } elseif ($affiliate_row_data->is_active == '1' &&
-                $affiliate_row_data->in_program == '0' &&
-                $affiliate_row_data->workout_program_id == 0
+
+                $undesirable_affiliate = static::createUndesirableAffiliate($metrics, $affiliate_row_data->workout_program_id); //todo select price program related workout program
+
+
+            } elseif (($affiliate_row_data->workout_program_id == 0 ||
+                    $affiliate_row_data->workout_program_id > 2) &&
+                $affiliate_row_data->is_active == '1'
+
             ) {
                 print_r('Undesirable affiliate' . $metrics->affiliate_id . ' is not in program' . "\n");
                 print_r('Update affiliate ' . $metrics->affiliate_id . "\n");
@@ -175,8 +181,8 @@ class HomeController extends Controller
                 static::calculateDesirabilityScore($metrics);
                 $data = static::prepareUndesirableAffiliateData($metrics);
 
-//                $data['desirability_score'] = -6; //todo delete it`s for test
-//                $data['gross_margin_126'] = 0.23; //todo delete it`s for test
+//                $data['desirability_score'] = -2; //todo delete it`s for test
+//                $data['gross_margin_126'] = 0.243; //todo delete it`s for test
 
 
                 $undesirable_affiliate = UndesirableAffiliate::find($affiliate_row_data->id)->update($data);
@@ -185,19 +191,56 @@ class HomeController extends Controller
         return true;
     }
 
+    /**
+     * @param $id
+     * @param $workout_program_id
+     * @return bool
+     */
+    public function updateUndesirableAffiliateById($id, $workout_program_id)
+    {
+        if ($workout_program_id != 0) {
+            $workout_program = WorkoutProgram::find($workout_program_id);
+            $price_program = PriceProgram::find($workout_program->price_program_id);
+
+            $data = [
+                'updated_price_name' => $price_program->price_name,
+                'updated_price' => $price_program->price,
+                'workout_program_id' => $workout_program->id,
+                'workout_duration' => intval($workout_program->duration),
+                'workout_set_date' => date("Y-m-d"),
+                'in_program' => '1'
+            ];
+        } else {
+            $price_program = PriceProgram::find(1);
+            $data = [
+                'updated_price_name' => $price_program->price_name,
+                'updated_price' => $price_program->price,
+                'workout_program_id' => 0,
+                'workout_duration' => 0,
+                'workout_set_date' => 0,
+                'in_program' => '0'
+            ];
+        }
+
+        $undesirable_affiliate = UndesirableAffiliate::find($id)->fill($data);
+        return ($undesirable_affiliate->update()) ? $undesirable_affiliate : false;
+    }
 
     /**
      * @param $metrics
      * @return array
      */
-    private static function prepareUndesirableAffiliateData($metrics, $workout_program_id = 0, $price_program_id = 1)
+    private static function prepareUndesirableAffiliateData($metrics, $workout_program_id = 0)
     {
         $affiliate = Affiliate::find($metrics->affiliate_id);
-        $price_program = PriceProgram::find($price_program_id); //Regular CPA
+        $price_program = PriceProgram::find(1); //Regular CPA
+
+        var_dump($affiliate->email);
 
         $data = [
             'affiliate_id' => $affiliate->id,
             'affiliate_name' => $affiliate->first_name . ' ' . $affiliate->last_name,
+            'email' => $affiliate->email,
             'affiliate_status' => $affiliate->status,
             'country_code' => $affiliate->country_code,
             'affiliate_type' => $affiliate->affiliate_type,
@@ -213,8 +256,12 @@ class HomeController extends Controller
             'updated_price_name' => $price_program->price_name,
         ];
 
-        if (intval($workout_program_id) > 2) {
+        if (intval($workout_program_id) > 0) {
             $workout_program = WorkoutProgram::find($workout_program_id);
+            $price_program = PriceProgram::find($workout_program->price_program_id);
+
+            $data['updated_price_name'] = $price_program->price_name;
+            $data['updated_price'] = $price_program->price;
             $data['workout_program_id'] = $workout_program->id;
             $data['workout_duration'] = intval($workout_program->duration);
             $data['workout_set_date'] = date("Y-m-d");
@@ -290,6 +337,11 @@ class HomeController extends Controller
         return ($net_settlements_total - $processing_cost - $metrics->total_cost_126) / ($net_settlements_total - $processing_cost);
     }
 
+    /**
+     * @param $num_transactions
+     * @param $num_disputes
+     * @return mixed
+     */
     private static function calculateProcessingCost($num_transactions, $num_disputes)
     {
         $transaction_fee = 0.2;
@@ -298,6 +350,12 @@ class HomeController extends Controller
         return $num_transactions * $transaction_fee + $num_disputes * $CB_processing_fee;
     }
 
+    /**
+     * @param $gross_settlements_total
+     * @param $disputes_total
+     * @param $refunds_total
+     * @return mixed
+     */
     private static function calculateGrossSettlementsTotal($gross_settlements_total, $disputes_total, $refunds_total)
     {
         return $gross_settlements_total - $disputes_total - $refunds_total;

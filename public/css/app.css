@@ -5779,8 +5779,10 @@ button.close {
 }
 
 #undesirable_affiliates th {
-  font-size: 10px;
+  font-size: 12px;
+  color:#fff;
   padding: 0 5px;
+  background-color: rgba(21, 23, 25, 0.71);
 }
 
 #undesirable_affiliates td {
@@ -5806,7 +5808,6 @@ button.close {
 
 .wp-list {
   position: absolute;
-  text-align: center;
   top: 0;
   left: 0;
   width: 100%;
@@ -5831,6 +5832,15 @@ button.close {
   z-index: 10;
 }
 
+#undesirable_affiliates .btn-remove-history {
+  position: absolute;
+  top:13px;
+  right: 4px;
+  cursor: pointer;
+  z-index: 11;
+  display: none;
+}
+
 .cell-data-container {
   position: relative;
   display: block;
@@ -5838,30 +5848,69 @@ button.close {
   padding: 10px 0;
 }
 
+.history-data {
+  background-color: #ffd5cb;
+  border: 1px solid #ccc;
+}
+
 .wp_0,
 .wp_0 select{
   text-align: left;
-  text-indent: 6px;
-  background-color: #fefbea;
+  text-indent: 10px;
+  background-color: white;
 }
 
 .wp_1,
-.wp_1 select{
+.wp_1 select {
   text-align: left;
-  text-indent: 6px;
-  background-color: #d2fa94;
+  text-indent: 10px;
+  background-color: #fcffb6;
 }
 
 .wp_2,
 .wp_2 select{
   text-align: left;
-  text-indent: 6px;
-  background-color: #fdc5b5;
+  text-indent: 10px;
+  background-color: #95e38e;
 }
 
 .wp_3,
 .wp_3 select{
   text-align: left;
-  text-indent: 6px;
-  background-color: #b7e8ab;
+  text-indent: 10px;
+  background-color: #a3c1ff;
 }
+
+.navbar {
+  padding: 15px 0;
+  background-color: rgba(21, 23, 25, 0.71);
+}
+
+.navbar > .container {
+  width: 98%;
+  margin: 0 1%;
+}
+
+.navbar-brand {
+  font-weight: bold;
+  font-size: 26px;
+  color: #fff !important;
+}
+
+.navbar-right .dropdown-toggle {
+  color: #fff !important;
+}
+
+.email_sent_date {
+  width: 100px;
+  cursor:pointer;
+}
+
+.email-yellow {
+  background-color: #fffb72;
+}
+
+.email-green {
+  background-color: #82ff7b;
+}
+

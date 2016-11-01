@@ -17,6 +17,7 @@ class CreateUndesirableAffiliatesTable extends Migration
             $table->increments('id');
             $table->integer('affiliate_id');
             $table->string('affiliate_name', 60);
+            $table->string('email', 60);
             $table->string('affiliate_status', 20);
             $table->string('country_code', 2);
             $table->string('affiliate_type', 32);
@@ -33,7 +34,9 @@ class CreateUndesirableAffiliatesTable extends Migration
             $table->string('updated_price_name', 20);
             $table->integer('updated_price');
             $table->tinyInteger('workout_duration');
-            $table->integer('workout_set_date');
+            $table->date('workout_set_date');
+            $table->dateTime('email_sent_date');
+            $table->enum('is_informed', [0, 1])->default(0);
             $table->enum('is_active', [0, 1])->default(1);
             $table->enum('in_program', [0, 1])->default(0);
             $table->timestamps();

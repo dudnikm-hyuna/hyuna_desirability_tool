@@ -21,3 +21,4 @@ Route::get('/home', 'HomeController@index');
 Route::get('/tool', 'HomeController@tool');
 Route::get('/undesirable-affiliates-data', 'HomeController@getUndesirableAffiliatesData');
 Route::get('/undesirable-affiliates-history-data/{id}', 'HomeController@getUndesirableAffiliateHistoryData');
+Route::get('/update-undesirable-affiliate/{id}/{wp_id}', 'HomeController@updateUndesirableAffiliateById');

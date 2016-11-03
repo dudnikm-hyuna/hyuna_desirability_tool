@@ -135,18 +135,18 @@
             "columns": [
                 {"data": "affiliate_name", "className": "affiliate-name"},
                 {"data": "affiliate_id"},
-                {"data": "affiliate_status"},
+                {"data": "aff_status"},
                 {"data": "country_code"},
-                {"data": "affiliate_type"},
-                {"data": "affiliate_size"},
+                {"data": "aff_type"},
+                {"data": "aff_size"},
                 {"data": "date_added"},
                 {"data": "review_date", "className": "review_date"},
-                {"data": "affiliate_price", "className": "affiliate_price"},
+                {"data": "aff_price", "className": "affiliate_price"},
                 {"data": "total_sales_126", "className": "total_sales_126"},
                 {"data": "total_cost_126", "className": "total_cost_126"},
                 {"data": "gross_margin_126", "className": "gross_margin_126"},
                 {"data": "num_disputes_126", "className": "num_disputes_126"},
-                {"data": "desirability_score", "className": "desirability_score"},
+                {"data": "desirability_scores", "className": "desirability_scores"},
                 {"data": "workout_program_id", "className": "workout_program_id"},
                 {"data": "updated_price_name", "className": "updated_price_name"},
                 {"data": "updated_price", "className": "updated_price"},
@@ -162,7 +162,13 @@
             "columnDefs": [
                 {
                     "render": function (data, type, row) {
-                        return '<span class="cell-data-container">' + data + ' ' +
+                      return    '<span class="cell-data-container">' + formatDate(data) + '</span>';
+                    },
+                    "targets": [6, 7, 18]
+                },
+                { // render affilaite name
+                    "render": function (data, type, row) {
+                        return '<span class="cell-data-container">' + row.aff_first_name + ' ' + row.aff_last_name + ' ' +
                                     '<span data-affiliate-id="' + row.affiliate_id + '"' +
                                         'class="btn-history glyphicon glyphicon-header"' +
                                         'data-toggle="tooltip" title="Show history">' +
@@ -172,7 +178,7 @@
                     },
                     "targets": 0
                 },
-                {
+                { //render workout program
                     "render": function (data, type, row) {
                         var emailSentTime = Date.parse(row.email_sent_date) || 0;
                         var currentTime = Date.now();
@@ -185,7 +191,7 @@
                             var wp_id;
                             for (wp_id = 0; wp_id <= 3; wp_id++) {
                                 var is_selected = (wp_id == data) ? 'selected' : '';
-                                options += '<option class="' + selectWPColor(wp_id) + '" ' + is_selected + ' value="' + wp_id + '">' + wp_id + '</option>';
+                                options += '<option class="wp_' + wp_id + '" ' + is_selected + ' value="' + wp_id + '">' + wp_id + '</option>';
                             }
 
                             return '<span data-informed=' + row.is_informed + ' data-id=' + row.id + ' class="cell-data-container wp_' + row.workout_program_id + '">' +
@@ -346,7 +352,11 @@
                     var td = tr.find('td.' + key);
                     var wp_class = ( key == 'workout_program_id') ? "wp_" + value : ""; // background color for wp
                     if (td.length !== 0) {
-                        td.append('<span class="cell-data-container history-data ' + wp_class + '">' + value + '</span>');
+                        if (key == 'date_added' || key == 'review_date' || key == 'workout_set_date') {
+                            td.append('<span class="cell-data-container history-data">' + formatDate(value) + '</span>');
+                        } else {
+                            td.append('<span class="cell-data-container history-data ' + wp_class + '">' + value + '</span>');
+                        }
                     }
                 });
             });
@@ -354,22 +364,18 @@
             return true;
         }
 
-        function selectWPColor(wp_id) {
-            switch (wp_id) {
-                case 0:
-                    wp_color = "wp_0";
-                    break;
-                case 1:
-                    wp_color = "wp_1";
-                    break;
-                case 2:
-                    wp_color = "wp_2";
-                    break;
-                case 3:
-                    wp_color = "wp_3";
-            }
+        function formatDate(dateTime) {
+            if (Date.parse(dateTime)) {
+                var date = new Date(dateTime);
+                console.log(date);
+                var day = date.getDate();
+                var month = date.getMonth() + 1;
+                var year = date.getFullYear();
 
-            return wp_color;
+                return year + '-' + month + '-' + day;
+            } else {
+                return '-';
+            }
         }
     });
 </script>

@@ -18,7 +18,7 @@ class UndesirableAffiliate extends Model
      *
      * @var string
      */
-    protected $table = 'undesirable_affiliates';
+    protected $table = 'undesirable_affiliates_2';
 
     /**
      * The attributes that are mass assignable.
@@ -26,10 +26,10 @@ class UndesirableAffiliate extends Model
      * @var array
      */
     protected $fillable = [
-        'affiliate_id', 'affiliate_name', 'email', 'affiliate_status', 'country_code', 'affiliate_type', 'affiliate_size',
-        'date_added', 'review_date', 'affiliate_price', 'total_sales_126', 'total_cost_126', 'gross_margin_126',
-        'num_disputes_126', 'desirability_score', 'updated_price_name', 'updated_price','workout_program_id',
-        'workout_duration','workout_set_date', 'email_status', 'email_sent_date', 'program_status', 'is_informed'
+        'affiliate_id', 'aff_first_name', 'aff_last_name', 'aff_email', 'aff_status', 'country_code', 'aff_type', 'aff_size',
+        'date_added', 'review_date', 'aff_price', 'total_sales_126', 'total_cost_126', 'gross_margin_126',
+        'num_disputes_126', 'desirability_scores', 'workout_program_id', 'updated_price_name', 'updated_price',
+        'workout_duration','workout_set_date', 'is_active', 'program_status', 'email_status', 'email_sent_date', 'is_informed', 'notes'
     ];
 
     /**
@@ -77,7 +77,7 @@ class UndesirableAffiliate extends Model
 
         $score = ($score == 0) ? $min_gm : $score;
 
-        $metrics->desirability_score = $score;
+        $metrics->desirability_scores = $score;
 
         return $score;
     }

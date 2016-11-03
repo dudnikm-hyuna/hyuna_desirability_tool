@@ -35,7 +35,7 @@ class CreateUndesirableAffiliatesTable extends Migration
             $table->integer('updated_price');
             $table->tinyInteger('workout_duration');
             $table->date('workout_set_date');
-            $table->string('email_status', 30)->default('send');
+            $table->string('email_status')->default('send');
             $table->dateTime('email_sent_date');
             $table->enum('is_informed', [0, 1])->default(0);
             $table->enum('is_active', [0, 1])->default(1);

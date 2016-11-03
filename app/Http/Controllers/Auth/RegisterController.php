@@ -47,21 +47,11 @@ class RegisterController extends Controller
      */
     protected function validator(array $data)
     {
-        $messages = [
-            'secure_key_confirmed' => 'Invalide secure key',
-        ];
-
-        Validator::extend('secure_key_confirmed', function($attribute, $value, $parameters)
-        {
-            return (config('app.secure_key') === $value) ? true : false;
-        });
-
         return Validator::make($data, [
             'name' => 'required|max:255',
             'email' => 'required|email|max:255|unique:users',
             'password' => 'required|min:6|confirmed',
-            'secure_key' => 'required|min:6|secure_key_confirmed',
-        ], $messages);
+        ]);
     }
 
     /**

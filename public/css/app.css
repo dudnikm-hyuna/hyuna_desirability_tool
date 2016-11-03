@@ -5901,8 +5901,8 @@ button.close {
   color: #fff !important;
 }
 
-.email_sent_date {
-  width: 100px;
+.email_status {
+  width: 110px;
   cursor:pointer;
 }
 
@@ -5913,4 +5913,3 @@ button.close {
 .email-green {
   background-color: #82ff7b;
 }
-

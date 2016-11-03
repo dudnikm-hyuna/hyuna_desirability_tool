@@ -75,12 +75,11 @@
 
             <div class="content">
                 <div class="title m-b-md">
-                    Desirability Tool
+                    Desirability Review - Huyna
                 </div>
 
                 <div class="links">
                     <a href="{{ url('/tool') }}">Go to tool</a>
-                    <a href="{{ url('/settings') }}">Settings</a>
                 </div>
             </div>
         </div>

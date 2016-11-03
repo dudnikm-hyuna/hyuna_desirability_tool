@@ -65,21 +65,6 @@
                                 @endif
                             </div>
                         </div>
-
-                        <div class="form-group{{ $errors->has('secure_key') ? ' has-error' : '' }}">
-                            <label for="password-confirm" class="col-md-4 control-label">Secure key</label>
-
-                            <div class="col-md-6">
-                                <input id="secure_key" type="password" class="form-control" name="secure_key" required>
-
-                                @if ($errors->has('secure_key'))
-                                    <span class="help-block">
-                                        <strong>{{ $errors->first('secure_key') }}</strong>
-                                    </span>
-                                @endif
-                            </div>
-                        </div>
-
                         <div class="form-group">
                             <div class="col-md-6 col-md-offset-4">
                                 <button type="submit" class="btn btn-primary">

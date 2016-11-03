@@ -10,7 +10,7 @@ use App\PriceProgram;
 use App\WorkoutProgram;
 use Yajra\Datatables\Facades\Datatables;
 
-class HomeController extends Controller
+class DesirabilityToolController extends Controller
 {
     /**
      * Create a new controller instance.
@@ -29,7 +29,7 @@ class HomeController extends Controller
     {
         $workout_programs_amount = count(WorkoutProgram::all());
 
-        return view('tool', ['wp_amount' => $workout_programs_amount]);
+        return view('tool');
     }
 
     /**
@@ -117,7 +117,7 @@ class HomeController extends Controller
                     continue;
                 }
 
-                if (static::calculateDesirabilityScore($metrics) > 0 && $metrics->total_cost >= 1500) { //todo change to total_cost<150
+                if (UndesirableAffiliate::calculateDesirabilityScore($metrics) > 0 && $metrics->total_cost >= 1500) { //todo change to total_cost<150
                     continue;
                 }
 
@@ -139,7 +139,7 @@ class HomeController extends Controller
     {
         print_r('Create new undesirable affiliate' . "\n");
 
-        static::calculateDesirabilityScore($metrics);
+        UndesirableAffiliate::calculateDesirabilityScore($metrics);
         $data = static::prepareUndesirableAffiliateData($metrics, $workout_program_id);
         return UndesirableAffiliate::create($data);
     }
@@ -155,7 +155,7 @@ class HomeController extends Controller
             if (($affiliate_row_data->workout_program_id == 1 ||
                     $affiliate_row_data->workout_program_id == 2) &&
                 $affiliate_row_data->is_active == '1' &&
-                $affiliate_row_data->in_program == '1'
+                $affiliate_row_data->program_status == 'in_program'
 
             ) { //todo logic
 //                print_r('Undesirable affiliate ' . $metrics->affiliate_id . ' is in program ' . "\n");
@@ -178,7 +178,7 @@ class HomeController extends Controller
                 print_r('Undesirable affiliate' . $metrics->affiliate_id . ' is not in program' . "\n");
                 print_r('Update affiliate ' . $metrics->affiliate_id . "\n");
 
-                static::calculateDesirabilityScore($metrics);
+                UndesirableAffiliate::calculateDesirabilityScore($metrics);
                 $data = static::prepareUndesirableAffiliateData($metrics);
 
 //                $data['desirability_score'] = -2; //todo delete it`s for test
@@ -196,7 +196,7 @@ class HomeController extends Controller
      * @param $workout_program_id
      * @return bool
      */
-    public function updateUndesirableAffiliateById($id, $workout_program_id)
+    public function updateUndesirableAffiliateById($id, $workout_program_id, $is_informed = 0)
     {
         if ($workout_program_id != 0) {
             $workout_program = WorkoutProgram::find($workout_program_id);
@@ -208,7 +208,7 @@ class HomeController extends Controller
                 'workout_program_id' => $workout_program->id,
                 'workout_duration' => intval($workout_program->duration),
                 'workout_set_date' => date("Y-m-d"),
-                'in_program' => '1'
+                'program_status' => 'in_program'
             ];
         } else {
             $price_program = PriceProgram::find(1);
@@ -218,9 +218,11 @@ class HomeController extends Controller
                 'workout_program_id' => 0,
                 'workout_duration' => 0,
                 'workout_set_date' => 0,
-                'in_program' => '0'
+                'program_status' => 'set_program'
             ];
         }
+
+        $data['email_status'] = ($is_informed == '1') ? 'wp_change' : 'not_sent';
 
         $undesirable_affiliate = UndesirableAffiliate::find($id)->fill($data);
         return ($undesirable_affiliate->update()) ? $undesirable_affiliate : false;
@@ -230,12 +232,10 @@ class HomeController extends Controller
      * @param $metrics
      * @return array
      */
-    private static function prepareUndesirableAffiliateData($metrics, $workout_program_id = 0)
+    private static function prepareUndesirableAffiliateData($metrics, $workout_program_id = 0, $is_informed = 0)
     {
         $affiliate = Affiliate::find($metrics->affiliate_id);
         $price_program = PriceProgram::find(1); //Regular CPA
-
-        var_dump($affiliate->email);
 
         $data = [
             'affiliate_id' => $affiliate->id,
@@ -244,7 +244,7 @@ class HomeController extends Controller
             'affiliate_status' => $affiliate->status,
             'country_code' => $affiliate->country_code,
             'affiliate_type' => $affiliate->affiliate_type,
-            'affiliate_size' => static::calculateAffiliateSize($metrics->total_cost),
+            'affiliate_size' => UndesirableAffiliate::calculateAffiliateSize($metrics->total_cost),
             'date_added' => date("Y-m-d H:i:s", $affiliate->date_added),
             'review_date' => date("Y-m-d H:i:s"),
             'affiliate_price' => $price_program->price,
@@ -253,7 +253,7 @@ class HomeController extends Controller
             'gross_margin_126' => $metrics->gross_margin_126,
             'num_disputes_126' => $metrics->num_disputes_126,
             'desirability_score' => $metrics->desirability_score,
-            'updated_price_name' => $price_program->price_name,
+            'updated_price_name' => $price_program->price_name
         ];
 
         if (intval($workout_program_id) > 0) {
@@ -265,100 +265,23 @@ class HomeController extends Controller
             $data['workout_program_id'] = $workout_program->id;
             $data['workout_duration'] = intval($workout_program->duration);
             $data['workout_set_date'] = date("Y-m-d");
-            $data['in_program'] = '1';
+            $data['program_status'] = 'in_program';
         }
 
         return $data;
     }
 
-    /**
-     * @param $total_cost
-     * @return string
-     */
-    private static function calculateAffiliateSize($total_cost)
+    public function sendEmail($id)
     {
-        if ($total_cost >= 100000) {
-            return 'L';
-        } elseif ($total_cost >= 60000 & $total_cost < 100000) {
-            return 'ML';
-        } elseif ($total_cost >= 10000 & $total_cost < 60000) {
-            return 'M';
-        } elseif ($total_cost >= 150 & $total_cost < 10000) {
-            return 'S';
-        } else {
-            return 'micro';
-        }
-    }
+        $data = [
+            'email_sent_date' => date("Y-m-d H:i:s"),
+            'email_status' => 'sent',
+            'is_informed' => '1',
+        ];
 
-    /**
-     * @param $metrics
-     * @return float|int
-     */
-    private static function calculateDesirabilityScore(&$metrics)
-    {
-        $min_gm = 0.35;
-        $aff_gm_126 = static::calculateGrossMargin($metrics);
+        $undesirable_affiliate = UndesirableAffiliate::find($id)->fill($data);
 
-        $metrics->gross_margin_126 = $aff_gm_126;
-
-        $score = 0;
-
-        // from % to decimal format (e.g. 0.45)
-        $aff_gm_126 = $aff_gm_126 / 100;
-
-        if ($aff_gm_126 < 0) {
-            $score = -10;
-        } elseif ($aff_gm_126 < $min_gm) {
-            $score = round((($aff_gm_126 * 10) - ($min_gm * 10)) / $min_gm);
-        } elseif ($aff_gm_126 >= $min_gm) {
-            $score = round((($aff_gm_126 - $min_gm) * 10) / (1 - $min_gm));
-        }
-
-        $score = ($score == 0) ? $min_gm : $score;
-
-        $metrics->desirability_score = $score;
-
-        return $score;
-    }
-
-    /**
-     * @param $metrics
-     * @return float
-     */
-    private static function calculateGrossMargin($metrics)
-    {
-        $processing_cost = static::calculateProcessingCost($metrics->num_transactions, $metrics->num_disputes);
-        $net_settlements_total = static::calculateGrossSettlementsTotal(
-            $metrics->gross_settlements_total,
-            $metrics->disputes_total,
-            $metrics->refunds_total
-        );
-
-        return ($net_settlements_total - $processing_cost - $metrics->total_cost_126) / ($net_settlements_total - $processing_cost);
-    }
-
-    /**
-     * @param $num_transactions
-     * @param $num_disputes
-     * @return mixed
-     */
-    private static function calculateProcessingCost($num_transactions, $num_disputes)
-    {
-        $transaction_fee = 0.2;
-        $CB_processing_fee = 20.00;
-
-        return $num_transactions * $transaction_fee + $num_disputes * $CB_processing_fee;
-    }
-
-    /**
-     * @param $gross_settlements_total
-     * @param $disputes_total
-     * @param $refunds_total
-     * @return mixed
-     */
-    private static function calculateGrossSettlementsTotal($gross_settlements_total, $disputes_total, $refunds_total)
-    {
-        return $gross_settlements_total - $disputes_total - $refunds_total;
+        return ($undesirable_affiliate->update()) ? $undesirable_affiliate : false;
     }
 
     /**

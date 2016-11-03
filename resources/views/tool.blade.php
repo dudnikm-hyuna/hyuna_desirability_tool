@@ -26,6 +26,9 @@
                 <th>WP Set Date</th>
                 <th>Program status</th>
                 <th>Id</th>
+                <th>Email Status</th>
+                <th>Email Sent Date</th>
+                <th>Is Informed</th>
                 <th>Email</th>
             </tr>
             </thead>

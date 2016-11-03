@@ -17,8 +17,9 @@ Route::get('/', function () {
 
 Auth::routes();
 
-Route::get('/home', 'HomeController@index');
-Route::get('/tool', 'HomeController@tool');
-Route::get('/undesirable-affiliates-data', 'HomeController@getUndesirableAffiliatesData');
-Route::get('/undesirable-affiliates-history-data/{id}', 'HomeController@getUndesirableAffiliateHistoryData');
-Route::get('/update-undesirable-affiliate/{id}/{wp_id}', 'HomeController@updateUndesirableAffiliateById');
+Route::get('/index', 'DesirabilityToolController@index');
+Route::get('/desirability-tool', 'DesirabilityToolController@tool');
+Route::get('/undesirable-affiliates-data', 'DesirabilityToolController@getUndesirableAffiliatesData');
+Route::get('/undesirable-affiliates-history-data/{id}', 'DesirabilityToolController@getUndesirableAffiliateHistoryData');
+Route::get('/update-undesirable-affiliate/{id}/{wp_id}/{is_informed}', 'DesirabilityToolController@updateUndesirableAffiliateById');
+Route::get('/send-email/{id}', 'DesirabilityToolController@sendEmail');

@@ -8,7 +8,7 @@
     <!-- CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'Desirability tool') }}</title>
+    <title>{{ config('app.name', 'Desirability Review - Huyna') }}</title>
 
     <!-- Styles -->
     <link href="https://cdn.datatables.net/1.10.12/css/jquery.dataTables.min.css" rel="stylesheet"/>
@@ -38,7 +38,7 @@
 
                 <!-- Branding Image -->
                 <a class="navbar-brand" href="{{ url('/') }}">
-                    {{ config('app.name', 'Desirability tool') }}
+                    {{ config('app.name', 'Desirability Review - Huyna') }}
                 </a>
             </div>
 
@@ -152,9 +152,11 @@
                 {"data": "updated_price", "className": "updated_price"},
                 {"data": "workout_duration", "className": "workout_duration"},
                 {"data": "workout_set_date", "className": "workout_set_date"},
-                {"data": "in_program"},
+                {"data": "program_status"},
                 {"data": "id"},
+                {"data": "email_status", "className": "email_status"},
                 {"data": "email_sent_date", "className": "email_sent_date"},
+                {"data": "is_informed"},
                 {"data": "email"}
             ],
             "columnDefs": [
@@ -172,26 +174,31 @@
                 },
                 {
                     "render": function (data, type, row) {
-                        var options = '';
-                        var wp_id;
-                        for (wp_id = 0; wp_id <= 3; wp_id++) {
-                            var is_selected = (wp_id == data) ? 'selected' : '';
-                            options += '<option class="' + selectWPColor(wp_id) + '" ' + is_selected + ' value="' + wp_id + '">' + wp_id + '</option>';
+                        var emailSentTime = Date.parse(row.email_sent_date) || 0;
+                        var currentTime = Date.now();
+                        var pendingTime = +new Date(emailSentTime + 2*24*60*60*1000);
+
+                        if (currentTime <= pendingTime) {
+                            return '<span class="cell-data-container wp_' + data + '">' + data + '</span>';
+                        } else {
+                            var options = '';
+                            var wp_id;
+                            for (wp_id = 0; wp_id <= 3; wp_id++) {
+                                var is_selected = (wp_id == data) ? 'selected' : '';
+                                options += '<option class="' + selectWPColor(wp_id) + '" ' + is_selected + ' value="' + wp_id + '">' + wp_id + '</option>';
+                            }
+
+                            return '<span data-informed=' + row.is_informed + ' data-id=' + row.id + ' class="cell-data-container wp_' + row.workout_program_id + '">' +
+                                        '<select name="wp-list" class="wp-list ">'
+                                        + options +
+                                        '</select>' +
+                                    '</span>';
                         }
-
-                        var select_template = '<span data-id=' + row.id + ' class="cell-data-container wp_' + row.workout_program_id + '">' +
-                                '<select name="wp-list" class="wp-list ">'
-                                + options +
-                                '</select>' +
-                                '</span>';
-
-                        return select_template;
                     },
                     "targets": 14
                 },
                 {
                     "render": function (data, type, row) {
-                        var data = (data == 1) ? 'in program' : ' set program';
 
                         return '<span class="cell-data-container">' + data + '</span>';
                     },
@@ -199,22 +206,28 @@
                 },
                 {
                     "render": function (data, type, row) {
-                        var emailSentTime = Date.parse(data) || 0;
+                        var emailSentTime = Date.parse(row.email_sent_date) || 0;
+                        var currentTime = Date.now();
+                        var pendingTime = +new Date(emailSentTime + 2*24*60*60*1000);
+                        var wp_set_date = Date.parse(row.workout_set_date) || 0;
 
-                        if(!emailSentTime) {
-                            return '<span class="cell-data-container"><button data-id="' + row.id + ' " class="btn-send-email">Send email</button></span>';
-                        } else {
-                            var currentTime = Date.now();
-                            var pendingTime = +new Date(emailSentTime + 2*24*60*60*1000);
-
-                            if (currentTime <= pendingTime) {
-                                return '<span class="cell-data-container email-yellow">' + data + '</span>';
-                            } else {
-                                return '<span class="cell-data-container email-green">' + data + '</span>';
-                            }
+                        if (row.workout_duration != 0 && wp_set_date != 0) {
+                            var wp_end_date = new Date(wp_set_date + row.workout_duration*24*60*60*1000);
                         }
 
-                        return '<span class="cell-data-container">' + data + '</span>';
+                        if (data == 'send') {
+                            return '<span class="cell-data-container"><button data-id="' + row.id + '" class="btn-send-email">Send email</button></span>';
+                        } else if (data == 'not_sent') {
+                            return '<span class="cell-data-container">Not sent email</span>';
+                        } else if (data == 'sent') {
+                            if (currentTime <= pendingTime) {
+                                return '<span class="cell-data-container email-yellow">' + row.email_sent_date + '</span>';
+                            } else {
+                                return '<span class="cell-data-container email-green">' + row.email_sent_date + '</span>';
+                            }
+                        } else if (data == 'wp_change') {
+                            return '<span class="cell-data-container">' + row.email_sent_date + '</span>';
+                        }
                     },
                     "targets": 21
                 },
@@ -224,7 +237,7 @@
                     },
                     "targets": '_all'
                 },
-                { "visible": false, "targets": [20,22] }
+                { "visible": false, "targets": [20, 22, 23, 24] }
             ]
         });
 
@@ -272,12 +285,15 @@
             var wp_id = $(this).val();
             var select_wrapper = $(this).parent(".cell-data-container");
             var id = select_wrapper.attr("data-id");
+            var is_informed = select_wrapper.attr("data-informed");
             var tr = select_wrapper.closest("tr");
 
            tr.attr("data-id", id);
+           tr.attr("data-informed", is_informed);
 
             var wp_change_confirm_btn = $("#wp-change-confirm");
             wp_change_confirm_btn.attr("data-id", id);
+            wp_change_confirm_btn.attr("data-informed", is_informed);
             wp_change_confirm_btn.attr("data-wp-id", wp_id);
 
             $('#wp-modal').modal('show');
@@ -286,12 +302,12 @@
         $("#wp-change-confirm").on("click", function(){
            var id = $(this).attr("data-id");
            var wp_id = $(this).attr("data-wp-id");
+           var is_informed = $(this).attr("data-informed");
            var tr = $("#undesirable_affiliates").find("tr[data-id=" + id + "]");
-            console.log(id, wp_id, tr);
 
             $.ajax({
                 method: "GET",
-                    url: '{{ url("update-undesirable-affiliate") }}' + '/' + id + '/' + wp_id,
+                    url: '{{ url("update-undesirable-affiliate") }}' + '/' + id + '/' + wp_id + '/' + is_informed,
                 })
                 .done(function (underisable_affiliate) {
                     table.row(tr).data(underisable_affiliate);
@@ -300,8 +316,28 @@
         });
 
         $("#undesirable_affiliates").on("click", ".btn-send-email", function(){
-            console.log('test');
+            var id = $(this).attr("data-id");
+            var tr = $(this).closest("tr");
+
+            tr.attr("data-id", id);
+
+            $("#send-email-confirm").attr("data-id", id);
+
             $('#send-email-modal').modal('show');
+        });
+
+        $("#send-email-confirm").on("click", function(){
+            var id = $(this).attr("data-id");
+            var tr = $(document).find("tr[data-id=" + id + "]");
+
+            $.ajax({
+                        method: "GET",
+                        url: '{{ url("send-email") }}' + '/' + id,
+                    })
+                    .done(function (underisable_affiliate) {
+                        table.row(tr).data(underisable_affiliate);
+                        $('#send-email-modal').modal('hide');
+                    });
         });
 
         function showUndesirableAffiliateHistory(history, tr) {

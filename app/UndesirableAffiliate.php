@@ -11,7 +11,7 @@ class UndesirableAffiliate extends Model
      *
      * @var string
      */
-    protected $connection = 'local';
+    protected $connection = 'main';
 
     /**
      * The table associated with the model.

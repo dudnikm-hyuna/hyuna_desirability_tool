@@ -195,7 +195,7 @@ class DesirabilityToolController extends Controller
 
         var_dump($history_limit);
 
-        $ids_to_delete = DB::table('undesirable_affiliates_2')
+        $ids_to_delete = DB::table('undesirable_affiliates')
             ->where('is_active', 0)
             ->where('affiliate_id', $affiliate->affiliate_id)
             ->groupBy('id')
@@ -206,7 +206,7 @@ class DesirabilityToolController extends Controller
                 var_dump($ids_to_delete);
 
         if (count($ids_to_delete)) {
-            DB::table('undesirable_affiliates_2')
+            DB::table('undesirable_affiliates')
                 ->where('is_active', 0)
                 ->where('affiliate_id', $affiliate->affiliate_id)
                 ->whereNotIn('id', $ids_to_delete)
@@ -220,7 +220,7 @@ class DesirabilityToolController extends Controller
      */
     public static function deleteHistory($id)
     {
-        return DB::table('undesirable_affiliates_2')
+        return DB::table('undesirable_affiliates')
             ->where('is_active', 0)
             ->where('affiliate_id', $id)
             ->delete();

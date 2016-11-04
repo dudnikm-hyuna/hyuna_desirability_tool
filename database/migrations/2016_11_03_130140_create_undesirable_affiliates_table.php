@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class CreateUndesirableAffiliatesTable2 extends Migration
+class CreateUndesirableAffiliatesTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,7 +13,7 @@ class CreateUndesirableAffiliatesTable2 extends Migration
      */
     public function up()
     {
-        Schema::create('undesirable_affiliates_2', function (Blueprint $table) {
+        Schema::create('undesirable_affiliates', function (Blueprint $table) {
             $table->increments('id');
             $table->integer('affiliate_id');
             $table->string('aff_first_name', 25);
@@ -53,6 +53,6 @@ class CreateUndesirableAffiliatesTable2 extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('undesirable_affiliates_2');
+        Schema::dropIfExists('undesirable_affiliates');
     }
 }

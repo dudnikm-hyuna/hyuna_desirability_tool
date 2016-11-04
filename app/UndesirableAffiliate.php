@@ -18,7 +18,7 @@ class UndesirableAffiliate extends Model
      *
      * @var string
      */
-    protected $table = 'undesirable_affiliates_2';
+    protected $table = 'undesirable_affiliates';
 
     /**
      * The attributes that are mass assignable.

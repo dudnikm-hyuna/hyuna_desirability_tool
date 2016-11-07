@@ -30,6 +30,7 @@ class CreateUndesirableAffiliatesTable extends Migration
             $table->decimal('total_cost_126', 6, 2);
             $table->decimal('gross_margin_126', 4, 2);
             $table->integer('num_disputes_126');
+            $table->integer('successful_premium_upgrades');
             $table->integer('desirability_scores');
             $table->tinyInteger('workout_program_id')->default(null);
             $table->string('updated_price_name', 25);
@@ -37,7 +38,7 @@ class CreateUndesirableAffiliatesTable extends Migration
             $table->integer('workout_duration');
             $table->dateTime('workout_set_date');
             $table->tinyInteger('is_active')->default(1);
-            $table->string('program_status', 25)->default('set_program');
+            $table->tinyInteger('program_status')->default(0);
             $table->string('email_status', 25)->default('send');
             $table->dateTime('email_sent_date');
             $table->tinyInteger('is_informed')->default(0);

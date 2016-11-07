@@ -21,5 +21,5 @@ Route::get('/index', 'DesirabilityToolController@index');
 Route::get('/desirability-tool', 'DesirabilityToolController@tool');
 Route::get('/undesirable-affiliates-data', 'DesirabilityToolController@getUndesirableAffiliatesData');
 Route::get('/undesirable-affiliates-history-data/{id}', 'DesirabilityToolController@getUndesirableAffiliateHistoryData');
-Route::get('/update-undesirable-affiliate/{id}/{wp_id}/{is_informed}', 'DesirabilityToolController@updateUndesirableAffiliateById');
 Route::get('/send-email/{id}', 'DesirabilityToolController@sendEmail');
+Route::get('/set-program/{id}/{wp_id}/{price_program}', 'DesirabilityToolController@setProgram');

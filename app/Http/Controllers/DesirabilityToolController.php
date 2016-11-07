@@ -71,7 +71,8 @@ class DesirabilityToolController extends Controller
                             SUM(stats.num_disputes) AS num_disputes,
                             SUM(stats.num_disputes_126) AS num_disputes_126,
                             SUM(stats.total_cost_126) AS total_cost_126,
-                            SUM(stats.total_sales_126) AS total_sales_126
+                            SUM(stats.total_sales_126) AS total_sales_126,
+                            SUM(stats.successful_premium_upgrades) AS successful_premium_upgrades
                 FROM jomedia.members m
                 JOIN (
                       SELECT
@@ -84,7 +85,8 @@ class DesirabilityToolController extends Controller
                             SUM(CASE WHEN (transaction_type = 'refund') THEN 1 ELSE 0 END) AS num_refunds, SUM(CASE WHEN dispute_type = 'chargeback' THEN 1 ELSE 0 END) AS num_disputes,
                             SUM(CASE WHEN (dispute_type = 'chargeback' AND (start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126) AND (dispute_date - issue_date <= :days_126)) THEN 1 ELSE 0 END) AS num_disputes_126,
                             SUM(DISTINCT CASE WHEN ( payout_amount > 0 AND start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 ) THEN payout_amount ELSE 0 END) AS total_cost_126,
-                            COUNT(DISTINCT CASE WHEN ( start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 AND payout_amount > 0 ) THEN stats_m.member_id END) AS total_sales_126
+                            COUNT(DISTINCT CASE WHEN ( start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 AND payout_amount > 0 ) THEN stats_m.member_id END) AS total_sales_126,
+                            COUNT(DISTINCT CASE WHEN stats_m.num_successful_rebills > 0 THEN stats_m.member_id END) AS successful_premium_upgrades
                       FROM  jomedia.members stats_m
                       JOIN jomedia.transactions stats_t ON stats_t.member_id = stats_m.member_id
                         WHERE issue_date >= :start_time AND stats_t.site_id <> 813 AND affiliate_id <> 0
@@ -137,8 +139,6 @@ class DesirabilityToolController extends Controller
      */
     public static function createUndesirableAffiliate($metrics, $workout_program_id, $is_informed, $is_active)
     {
-        print_r('Create new undesirable affiliate' . "\n");
-
         UndesirableAffiliate::calculateDesirabilityScore($metrics);
         $data = static::prepareUndesirableAffiliateData($metrics, $workout_program_id, $is_informed, $is_active);
 
@@ -185,15 +185,13 @@ class DesirabilityToolController extends Controller
      */
     public static function saveHistory($affiliate, $metrics)
     {
-        static::createUndesirableAffiliate($metrics, $affiliate->workout_program_id, 0, 0); //todo select price program related workout program
+        static::createUndesirableAffiliate($metrics, $affiliate->workout_program_id, 0, 0); //todo
 
         if ($affiliate->workout_duration) {
             $history_limit = $affiliate->workout_duration / 30;
         } else {
             $history_limit = 6;
         }
-
-        var_dump($history_limit);
 
         $ids_to_delete = DB::table('undesirable_affiliates')
             ->where('is_active', 0)
@@ -203,8 +201,6 @@ class DesirabilityToolController extends Controller
             ->pluck('id')
             ->toArray();
 
-                var_dump($ids_to_delete);
-
         if (count($ids_to_delete)) {
             DB::table('undesirable_affiliates')
                 ->where('is_active', 0)
@@ -213,6 +209,7 @@ class DesirabilityToolController extends Controller
                 ->delete();
         }
 
+        return true;
     }
 
     /**
@@ -229,43 +226,53 @@ class DesirabilityToolController extends Controller
     /**
      * @param $id
      * @param $workout_program_id
+     * @param $price_program
      * @return bool
      */
-    public function updateUndesirableAffiliateById($id, $workout_program_id, $is_informed = 0)
+    public function setProgram($id, $workout_program_id, $price_program)
     {
+        $undesirable_affiliate = UndesirableAffiliate::find($id);
 
-
-        if ($workout_program_id != 0) {
+        if ($workout_program_id > 0) {
             $workout_program = WorkoutProgram::find($workout_program_id);
-            $price_program = PriceProgram::find($workout_program->price_program_id);
-
             $data = [
-                'updated_price_name' => $price_program->price_name,
-                'updated_price' => $price_program->price,
+                'aff_price' => static::calculatePrice($undesirable_affiliate, $price_program),
+                'updated_price_name' => $price_program,
+                'updated_price' => $undesirable_affiliate->aff_price,
                 'workout_program_id' => $workout_program->id,
                 'workout_duration' => intval($workout_program->duration),
                 'workout_set_date' => date("Y-m-d"),
-                'program_status' => 'in_program'
-            ];
-        } else {
-            $price_program = PriceProgram::find(1);
-            $data = [
-                'updated_price_name' => $price_program->price_name,
-                'updated_price' => $price_program->price,
-                'workout_program_id' => 0,
-                'workout_duration' => 0,
-                'workout_set_date' => 0,
-                'program_status' => 'set_program'
+                'program_status' => 1,
+                'email_status' => ($undesirable_affiliate->is_informed == 0) ? 'not_sent' : 'sent'
             ];
         }
 
-        $data['email_status'] = ($is_informed == '1') ? 'wp_change' : 'not_sent';
-
-        $undesirable_affiliate = UndesirableAffiliate::find($id)->fill($data);
+        $undesirable_affiliate->fill($data);
 
         static::deleteHistory($undesirable_affiliate->affiliate_id);
 
         return ($undesirable_affiliate->update()) ? $undesirable_affiliate : false;
+    }
+
+    /**
+     * @param $undesirable_affiliate
+     * @param $price_program
+     * @return float
+     */
+    protected static function calculatePrice($affiliate_data, $price_program = 'regular_cpa')
+    {
+        $regular_cpa = $affiliate_data->total_cost_126 / $affiliate_data->total_sales_126;
+
+        if ($price_program == 'premium_cpa') {
+            return $regular_cpa / 2;
+        } elseif ($price_program == 'spu') {
+//            return $regular_cpa * $affiliate_data->successful_premium_upgrades;
+            return 0;
+        } elseif ($price_program == 'rev_share') {
+            return $regular_cpa * 0.35;
+        } else {
+            return $regular_cpa;
+        }
     }
 
     /**
@@ -275,7 +282,6 @@ class DesirabilityToolController extends Controller
     private static function prepareUndesirableAffiliateData($metrics, $workout_program_id = 0, $is_informed = 0, $is_active)
     {
         $affiliate = Affiliate::find($metrics->affiliate_id);
-        $price_program = PriceProgram::find(1); //Regular CPA
 
         $data = [
             'affiliate_id' => $affiliate->id,
@@ -288,27 +294,16 @@ class DesirabilityToolController extends Controller
             'aff_size' => UndesirableAffiliate::calculateAffiliateSize($metrics->total_cost),
             'date_added' => date("Y-m-d H:i:s", $affiliate->date_added),
             'review_date' => date("Y-m-d H:i:s"),
-            'aff_price' => $price_program->price,
+            'aff_price' => $metrics->total_cost_126 / $metrics->total_sales_126, //Regular CPA
             'total_sales_126' => $metrics->total_sales_126,
             'total_cost_126' => $metrics->total_cost_126,
             'gross_margin_126' => $metrics->gross_margin_126,
             'num_disputes_126' => $metrics->num_disputes_126,
+//            'successful_premium_upgrades' => $metrics->successful_premium_upgrades,
             'desirability_scores' => $metrics->desirability_scores,
-            'updated_price_name' => $price_program->price_name,
+            'updated_price_name' => 'regular_cpa',
             'is_active' => $is_active
         ];
-
-        if (intval($workout_program_id) > 0) {
-            $workout_program = WorkoutProgram::find($workout_program_id);
-            $price_program = PriceProgram::find($workout_program->price_program_id);
-
-            $data['updated_price_name'] = $price_program->price_name;
-            $data['updated_price'] = $price_program->price;
-            $data['workout_program_id'] = $workout_program->id;
-            $data['workout_duration'] = intval($workout_program->duration);
-            $data['workout_set_date'] = date("Y-m-d");
-            $data['program_status'] = 'in_program';
-        }
 
         return $data;
     }

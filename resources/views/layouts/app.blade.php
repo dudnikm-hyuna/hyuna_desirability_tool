@@ -84,20 +84,20 @@
 
     @yield('content')
 
-    <!-- Change Workout Program Modal -->
-    <div class="modal fade" id="wp-modal" tabindex="-1" role="dialog" aria-labelledby="wp-modal">
+    <!-- Set Workout Program Modal -->
+    <div class="modal fade" id="set-program-modal" tabindex="-1" role="dialog" aria-labelledby="wp-modal">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title" id="wp-modal-label">Change Workout program</h4>
+                    <h4 class="modal-title" id="wp-modal-label">Set Workout program</h4>
                 </div>
                 <div class="modal-body">
-                    Are you sure you want to change Workout program?
+                    Are you sure you want to set Workout program?
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">No</button>
-                    <button type="button" class="btn btn-primary" id="wp-change-confirm">Yes</button>
+                    <button type="button" class="btn btn-primary" id="set-program-confirm">Yes</button>
                 </div>
             </div>
         </div>
@@ -152,7 +152,7 @@
                 {"data": "updated_price", "className": "updated_price"},
                 {"data": "workout_duration", "className": "workout_duration"},
                 {"data": "workout_set_date", "className": "workout_set_date"},
-                {"data": "program_status"},
+                {"data": "program_status", "className": "program_status"},
                 {"data": "id"},
                 {"data": "email_status", "className": "email_status"},
                 {"data": "email_sent_date", "className": "email_sent_date"},
@@ -166,7 +166,7 @@
                     },
                     "targets": [6, 7, 18]
                 },
-                { // render affilaite name
+                { // affilaite name
                     "render": function (data, type, row) {
                         return '<span class="cell-data-container">' + row.aff_first_name + ' ' + row.aff_last_name + ' ' +
                                     '<span data-affiliate-id="' + row.affiliate_id + '"' +
@@ -178,7 +178,7 @@
                     },
                     "targets": 0
                 },
-                { //render workout program
+                { //workout program
                     "render": function (data, type, row) {
                         var emailSentTime = Date.parse(row.email_sent_date) || 0;
                         var currentTime = Date.now();
@@ -189,7 +189,7 @@
                         } else {
                             var options = '';
                             var wp_id;
-                            for (wp_id = 0; wp_id <= 3; wp_id++) {
+                            for (wp_id = 0; wp_id <= 4; wp_id++) {
                                 var is_selected = (wp_id == data) ? 'selected' : '';
                                 options += '<option class="wp_' + wp_id + '" ' + is_selected + ' value="' + wp_id + '">' + wp_id + '</option>';
                             }
@@ -203,10 +203,32 @@
                     },
                     "targets": 14
                 },
-                {
+                { //updated price
                     "render": function (data, type, row) {
+                        if (data == 'regular_cpa') {
+                            return '<span class="cell-data-container" data-price-program="regular_cpa">Regular CPA</span>';
+                        } else if (data == 'premium_cpa') {
+                            return '<span class="cell-data-container" data-price-program="premium_cpa">Premium CPA</span>';
+                        } else if (data == 'spu') {
+                            return '<span class="cell-data-container" data-price-program="spu">SPU</span>';
+                        } else if (data == 'rev_share') {
+                            return '<span class="cell-data-container" data-price-program="rev_share">Rev Share</span>';
+                        }
+                    },
+                    "targets": 15
+                },
+                { // program status
+                    "render": function (data, type, row) {
+                        if (data == 0) {
+                            return '<span class="cell-data-container" data-program-status="0"><button data-id="' + row.id + '" class="btn-set-program">Set program</button></span>';
+                        } else if(data == 1) {
+                            var currentTime = Date.now();
+                            var wp_set_date = Date.parse(row.workout_set_date) || 0;
+                            var wp_end_date = new Date(wp_set_date + row.workout_duration*24*60*60*1000);
+                            var status = (wp_end_date < currentTime) ? 'review' : 'in_program';
 
-                        return '<span class="cell-data-container">' + data + '</span>';
+                            return '<span class="cell-data-container" data-program-status="1">' + status + '</span>';
+                        }
                     },
                     "targets": 19
                 },
@@ -229,7 +251,9 @@
                             if (currentTime <= pendingTime) {
                                 return '<span class="cell-data-container email-yellow">' + row.email_sent_date + '</span>';
                             } else {
-                                return '<span class="cell-data-container email-green">' + row.email_sent_date + '</span>';
+                                var email_color = (row.program_status == 0) ? 'email-green' : '';
+
+                                return '<span class="cell-data-container ' + email_color + '">' + row.email_sent_date + '</span>';
                             }
                         } else if (data == 'wp_change') {
                             return '<span class="cell-data-container">' + row.email_sent_date + '</span>';
@@ -289,35 +313,68 @@
 
         $("#undesirable_affiliates").on("change",".wp-list", function(){
             var wp_id = $(this).val();
-            var select_wrapper = $(this).parent(".cell-data-container");
-            var id = select_wrapper.attr("data-id");
-            var is_informed = select_wrapper.attr("data-informed");
-            var tr = select_wrapper.closest("tr");
+            var tr = $(this).closest("tr");
+            var container = tr.find(".updated_price_name > .cell-data-container");
+            var program_status = tr.find("[data-program-status]").attr("data-program-status");
 
-           tr.attr("data-id", id);
-           tr.attr("data-informed", is_informed);
+            $(this).closest(".cell-data-container").removeClass().addClass("cell-data-container wp_" + wp_id);
 
-            var wp_change_confirm_btn = $("#wp-change-confirm");
-            wp_change_confirm_btn.attr("data-id", id);
-            wp_change_confirm_btn.attr("data-informed", is_informed);
-            wp_change_confirm_btn.attr("data-wp-id", wp_id);
+            if (wp_id == 3) {
+                container.html('<select class="price-program-list">' +
+                        '<option value="regular_cpa">Regular CPA</option>' +
+                        '<option value="premium_cpa">Premium CPA</option>' +
+                        '<option value="spu">SPU</option>' +
+                        '</select>');
+            } else if (wp_id == 2){
+                container.attr("data-price-program", "premium_cpa");
+                container.html("Premium CPA");
+            } else if (wp_id == 4) {
+                container.attr("data-price-program", "rev_share");
+                container.html("Rev Share");
+            } else {
+                container.attr("data-price-program", "regular_cpa");
+                container.html("Regular CPA");
+            }
 
-            $('#wp-modal').modal('show');
+            if (program_status == 1) {
+                tr.find(".program_status > .cell-data-container").html('<button class="btn-set-program">Set program</button>');
+            }
+
         });
 
-        $("#wp-change-confirm").on("click", function(){
-           var id = $(this).attr("data-id");
-           var wp_id = $(this).attr("data-wp-id");
-           var is_informed = $(this).attr("data-informed");
-           var tr = $("#undesirable_affiliates").find("tr[data-id=" + id + "]");
+        $("#undesirable_affiliates").on("click", ".btn-set-program", function(){
+            var tr = $(this).closest("tr");
+            var id = $(this).attr("data-id");
+            var wp_id = tr.find(".wp-list").val();
+            var price_program = tr.find(".updated_price_name > .cell-data-container").attr("data-price-program");
+
+            tr.attr("data-id", id);
+
+            $("#set-program-confirm").attr("data-id", id);
+            $("#set-program-confirm").attr("data-wp-id", wp_id);
+            $("#set-program-confirm").attr("data-price-program", price_program);
+            $('#set-program-modal').modal('show');
+
+        });
+
+        $("#undesirable_affiliates").on("change",".price-program-list", function(){
+            var price_program = $(this).val();
+            $(this).closest(".cell-data-container").attr("data-price-program", price_program);
+        });
+
+        $("#set-program-confirm").on("click", function(){
+            var id = $(this).attr("data-id");
+            var wp_id = $(this).attr("data-wp-id");
+            var price_program = $(this).attr("data-price-program");
+            var tr = $("#undesirable_affiliates").find("tr[data-id=" + id + "]");
 
             $.ajax({
                 method: "GET",
-                    url: '{{ url("update-undesirable-affiliate") }}' + '/' + id + '/' + wp_id + '/' + is_informed,
+                    url: '{{ url("set-program") }}' + '/' + id + '/' + wp_id + '/' + price_program
                 })
                 .done(function (underisable_affiliate) {
                     table.row(tr).data(underisable_affiliate);
-                    $('#wp-modal').modal('hide');
+                    $('#set-program-modal').modal('hide');
             });
         });
 
@@ -347,8 +404,22 @@
         });
 
         function showUndesirableAffiliateHistory(history, tr) {
+            var row_to_show = [
+                'review_date',
+                'total_cost_126',
+                'total_sales_126',
+                'gross_margin_126',
+                'num_disputes_126',
+                'desirability_scores',
+            ];
             history.forEach(function (e) {
                 $.each(e, function( key, value ) {
+                    var in_array = $.inArray( key, row_to_show);
+
+                    if (in_array == -1) {
+                        return true;
+                    }
+
                     var td = tr.find('td.' + key);
                     var wp_class = ( key == 'workout_program_id') ? "wp_" + value : ""; // background color for wp
                     if (td.length !== 0) {
@@ -367,7 +438,6 @@
         function formatDate(dateTime) {
             if (Date.parse(dateTime)) {
                 var date = new Date(dateTime);
-                console.log(date);
                 var day = date.getDate();
                 var month = date.getMonth() + 1;
                 var year = date.getFullYear();

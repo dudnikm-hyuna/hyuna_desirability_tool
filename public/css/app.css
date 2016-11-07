@@ -5806,7 +5806,8 @@ button.close {
   width: 100%;
 }
 
-.wp-list {
+.wp-list,
+.price-program-list{
   position: absolute;
   top: 0;
   left: 0;
@@ -5814,6 +5815,11 @@ button.close {
   height: 40px;
   border: 0;
   background: #fff;
+}
+
+.wp-list option,
+.price-program-list option {
+  text-align: center;
 }
 
 #undesirable_affiliates .affiliate-name {
@@ -5881,6 +5887,13 @@ button.close {
   background-color: #a3c1ff;
 }
 
+.wp_4,
+.wp_4 select{
+  text-align: left;
+  text-indent: 10px;
+  background-color: #ffb8ff;
+}
+
 .navbar {
   padding: 15px 0;
   background-color: rgba(21, 23, 25, 0.71);
@@ -5901,7 +5914,8 @@ button.close {
   color: #fff !important;
 }
 
-.email_status {
+.email_status,
+.program_status{
   width: 110px;
   cursor:pointer;
 }

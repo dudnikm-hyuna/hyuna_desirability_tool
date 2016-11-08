@@ -21,7 +21,6 @@
                 <th>Desirability Score</th>
                 <th>Workout Program</th>
                 <th>Updated Price Name</th>
-                <th>Updated Price</th>
                 <th>Workout duration</th>
                 <th>WP Set Date</th>
                 <th>Program status</th>

@@ -23,3 +23,4 @@ Route::get('/undesirable-affiliates-data', 'DesirabilityToolController@getUndesi
 Route::get('/undesirable-affiliates-history-data/{id}', 'DesirabilityToolController@getUndesirableAffiliateHistoryData');
 Route::get('/send-email/{id}', 'DesirabilityToolController@sendEmail');
 Route::get('/set-program/{id}/{wp_id}/{price_program}', 'DesirabilityToolController@setProgram');
+Route::get('/undesirable-affiliate/{id}', 'DesirabilityToolController@getUndesirableAffiliateHistoryLogData');

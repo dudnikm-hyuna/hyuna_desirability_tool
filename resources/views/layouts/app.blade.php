@@ -133,7 +133,7 @@
             "paging": false,
 //            "aaSorting": [],
             "columns": [
-                {"data": "affiliate_name", "className": "affiliate-name"},
+                {"data": "affiliate_name", "className": "affiliate_name"},
                 {"data": "affiliate_id"},
                 {"data": "aff_status"},
                 {"data": "country_code"},
@@ -149,9 +149,8 @@
                 {"data": "desirability_scores", "className": "desirability_scores"},
                 {"data": "workout_program_id", "className": "workout_program_id"},
                 {"data": "updated_price_name", "className": "updated_price_name"},
-                {"data": "updated_price", "className": "updated_price"},
                 {"data": "workout_duration", "className": "workout_duration"},
-                {"data": "workout_set_date", "className": "workout_set_date"},
+                {"data": "workout_set_date", "className": "workout_set_date"}, //17
                 {"data": "program_status", "className": "program_status"},
                 {"data": "id"},
                 {"data": "email_status", "className": "email_status"},
@@ -164,11 +163,12 @@
                     "render": function (data, type, row) {
                       return    '<span class="cell-data-container">' + formatDate(data) + '</span>';
                     },
-                    "targets": [6, 7, 18]
+                    "targets": [6, 7, 17]
                 },
                 { // affilaite name
                     "render": function (data, type, row) {
-                        return '<span class="cell-data-container">' + row.aff_first_name + ' ' + row.aff_last_name + ' ' +
+                        return '<span class="cell-data-container">' +
+                                '<a href="{{ url("undesirable-affiliate") }}' + '/' + row.affiliate_id +'">' + row.aff_first_name + ' ' + row.aff_last_name + '</a> ' +
                                     '<span data-affiliate-id="' + row.affiliate_id + '"' +
                                         'class="btn-history glyphicon glyphicon-header"' +
                                         'data-toggle="tooltip" title="Show history">' +
@@ -230,7 +230,7 @@
                             return '<span class="cell-data-container" data-program-status="1">' + status + '</span>';
                         }
                     },
-                    "targets": 19
+                    "targets": 18
                 },
                 {
                     "render": function (data, type, row) {
@@ -259,7 +259,7 @@
                             return '<span class="cell-data-container">' + row.email_sent_date + '</span>';
                         }
                     },
-                    "targets": 21
+                    "targets": 20
                 },
                 {
                     "render": function (data, type, row) {
@@ -267,7 +267,7 @@
                     },
                     "targets": '_all'
                 },
-                { "visible": false, "targets": [20, 22, 23, 24] }
+                { "visible": false, "targets": [19, 21, 22, 23] }
             ]
         });
 

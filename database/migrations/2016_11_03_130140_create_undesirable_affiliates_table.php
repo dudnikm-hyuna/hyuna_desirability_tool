@@ -34,10 +34,10 @@ class CreateUndesirableAffiliatesTable extends Migration
             $table->integer('desirability_scores');
             $table->tinyInteger('workout_program_id')->default(null);
             $table->string('updated_price_name', 25);
-            $table->integer('updated_price');
             $table->integer('workout_duration');
             $table->dateTime('workout_set_date');
             $table->tinyInteger('is_active')->default(1);
+            $table->tinyInteger('is_history_log')->default(0);
             $table->tinyInteger('program_status')->default(0);
             $table->string('email_status', 25)->default('send');
             $table->dateTime('email_sent_date');

@@ -5774,11 +5774,15 @@ button.close {
   margin: 0 1%;
 }
 
-#undesirable_affiliates {
+#undesirable_affiliates,
+#undesirable_affiliate_history_log,
+#undesirable_affiliate_info{
   font-size: 12px;
 }
 
-#undesirable_affiliates th {
+#undesirable_affiliates th,
+#undesirable_affiliate_history_log th,
+#undesirable_affiliate_info th{
   font-size: 12px;
   color:#fff;
   padding: 0 5px;
@@ -5822,7 +5826,7 @@ button.close {
   text-align: center;
 }
 
-#undesirable_affiliates .affiliate-name {
+#undesirable_affiliates .affiliate_name {
   position: relative;
   width: 140px;
   padding: 0;
@@ -5926,4 +5930,8 @@ button.close {
 
 .email-green {
   background-color: #82ff7b;
+}
+
+.btn-back-to-tool {
+  float: right;
 }

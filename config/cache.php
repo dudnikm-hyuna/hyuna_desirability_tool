@@ -46,7 +46,7 @@ return [
 
         'file' => [
             'driver' => 'file',
-            'path' => storage_path('redis'),
+            'path' => storage_path('framework/cache'),
         ],
 
         'memcached' => [

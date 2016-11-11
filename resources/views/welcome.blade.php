@@ -79,7 +79,7 @@
                 </div>
 
                 <div class="links">
-                    <a href="{{ url('/tool') }}">Go to tool</a>
+                    <a href="{{ url('/desirability-tool') }}">Go to tool</a>
                 </div>
             </div>
         </div>

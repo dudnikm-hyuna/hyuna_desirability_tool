@@ -5935,3 +5935,8 @@ button.close {
 .btn-back-to-tool {
   float: right;
 }
+
+.preloader {
+  float: left;
+  display: none;
+}

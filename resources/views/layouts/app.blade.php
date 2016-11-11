@@ -96,6 +96,9 @@
                     Are you sure you want to set Workout program?
                 </div>
                 <div class="modal-footer">
+                    <div class="preloader">
+                        <img src="/img/preloader.gif" alt="">
+                    </div>
                     <button type="button" class="btn btn-default" data-dismiss="modal">No</button>
                     <button type="button" class="btn btn-primary" id="set-program-confirm">Yes</button>
                 </div>
@@ -140,7 +143,7 @@
                 {"data": "aff_type"},
                 {"data": "aff_size"},
                 {"data": "date_added"},
-                {"data": "review_date", "className": "review_date"},
+                {"data": "reviewed_date", "className": "reviewed_date"},
                 {"data": "aff_price", "className": "affiliate_price"},
                 {"data": "total_sales_126", "className": "total_sales_126"},
                 {"data": "total_cost_126", "className": "total_cost_126"},
@@ -232,7 +235,7 @@
                     },
                     "targets": 18
                 },
-                {
+                { // email status
                     "render": function (data, type, row) {
                         var emailSentTime = Date.parse(row.email_sent_date) || 0;
                         var currentTime = Date.now();
@@ -337,7 +340,9 @@
             }
 
             if (program_status == 1) {
-                tr.find(".program_status > .cell-data-container").html('<button class="btn-set-program">Set program</button>');
+                var id = $(this).closest('.cell-data-container').attr("data-id");
+                tr.find(".program_status > .cell-data-container").html('<button data-id="' + id + '" class="btn-set-program">Set program</button>');
+                tr.find(".email_status > .cell-data-container").html('<button data-id="' + id + '" class="btn-send-email">Send email</button>');
             }
 
         });
@@ -368,12 +373,15 @@
             var price_program = $(this).attr("data-price-program");
             var tr = $("#undesirable_affiliates").find("tr[data-id=" + id + "]");
 
+            $(".preloader").show();
+
             $.ajax({
                 method: "GET",
                     url: '{{ url("set-program") }}' + '/' + id + '/' + wp_id + '/' + price_program
                 })
                 .done(function (underisable_affiliate) {
                     table.row(tr).data(underisable_affiliate);
+                    $(".preloader").hide();
                     $('#set-program-modal').modal('hide');
             });
         });
@@ -405,7 +413,7 @@
 
         function showUndesirableAffiliateHistory(history, tr) {
             var row_to_show = [
-                'review_date',
+                'reviewed_date',
                 'total_cost_126',
                 'total_sales_126',
                 'gross_margin_126',
@@ -423,7 +431,7 @@
                     var td = tr.find('td.' + key);
                     var wp_class = ( key == 'workout_program_id') ? "wp_" + value : ""; // background color for wp
                     if (td.length !== 0) {
-                        if (key == 'date_added' || key == 'review_date' || key == 'workout_set_date') {
+                        if (key == 'date_added' || key == 'reviewed_date' || key == 'workout_set_date') {
                             td.append('<span class="cell-data-container history-data">' + formatDate(value) + '</span>');
                         } else {
                             td.append('<span class="cell-data-container history-data ' + wp_class + '">' + value + '</span>');

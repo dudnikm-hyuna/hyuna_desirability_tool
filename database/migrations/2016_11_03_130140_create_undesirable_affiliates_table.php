@@ -24,7 +24,7 @@ class CreateUndesirableAffiliatesTable extends Migration
             $table->string('aff_type', 25);
             $table->string('aff_size', 5);
             $table->dateTime('date_added');
-            $table->dateTime('review_date');
+            $table->dateTime('reviewed_date');
             $table->integer('aff_price');
             $table->integer('total_sales_126');
             $table->decimal('total_cost_126', 6, 2);

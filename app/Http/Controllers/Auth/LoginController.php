@@ -25,7 +25,7 @@ class LoginController extends Controller
      *
      * @var string
      */
-    protected $redirectTo = '/tool';
+    protected $redirectTo = '/desirability-tool';
 
     /**
      * Create a new controller instance.

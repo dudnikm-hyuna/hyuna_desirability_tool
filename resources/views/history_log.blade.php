@@ -51,7 +51,7 @@
             <tbody>
             @foreach ($affiliate_history_log_data as $row)
                 <tr>
-                    <td>{{ $row->review_date }}</td>
+                    <td>{{ $row->reviewed_date }}</td>
                     <td>{{ $row->aff_price }}</td>
                     <td>{{ $row->total_sales_126 }}</td>
                     <td>{{ $row->total_cost_126 }}</td>

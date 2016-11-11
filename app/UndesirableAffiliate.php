@@ -27,7 +27,7 @@ class UndesirableAffiliate extends Model
      */
     protected $fillable = [
         'affiliate_id', 'aff_first_name', 'aff_last_name', 'aff_email', 'aff_status', 'country_code', 'aff_type', 'aff_size',
-        'date_added', 'review_date', 'aff_price', 'total_sales_126', 'total_cost_126', 'gross_margin_126',
+        'date_added', 'reviewed_date', 'aff_price', 'total_sales_126', 'total_cost_126', 'gross_margin_126',
         'num_disputes_126', 'desirability_scores', 'workout_program_id', 'updated_price_name', 'updated_price',
         'workout_duration','workout_set_date', 'is_active', 'program_status', 'email_status', 'email_sent_date', 'is_informed', 'notes'
     ];

@@ -62,7 +62,7 @@ class DesirabilityToolController extends Controller
             'is_active' => '0'
         ])->get();
 
-        return view('history_log',[
+        return view('history_log', [
             'affiliate' => $affiliate,
             'affiliate_history_log_data' => $affiliate_history_log_data
         ]);
@@ -158,8 +158,8 @@ class DesirabilityToolController extends Controller
         UndesirableAffiliate::calculateDesirabilityScore($metrics);
         $data = static::prepareUndesirableAffiliateData($metrics, $is_active);
 
-        $data['desirability_scores'] = -3; //todo delete it`s for test
-        $data['gross_margin_126'] = 0.333; //todo delete it`s for test
+//        $data['desirability_scores'] = -3; //todo delete it`s for test
+//        $data['gross_margin_126'] = 0.333; //todo delete it`s for test
 
         return UndesirableAffiliate::create($data);
     }
@@ -185,8 +185,8 @@ class DesirabilityToolController extends Controller
                 UndesirableAffiliate::calculateDesirabilityScore($metrics);
                 $data = static::prepareUndesirableAffiliateData($metrics, 1);
 
-                $data['desirability_scores'] = -6; //todo delete it`s for test
-                $data['gross_margin_126'] = 0.222; //todo delete it`s for test
+//                $data['desirability_scores'] = -6; //todo delete it`s for test
+//                $data['gross_margin_126'] = 0.222; //todo delete it`s for test
 
 
                 $undesirable_affiliate = UndesirableAffiliate::find($affiliate_row_data->id)->update($data);
@@ -221,10 +221,10 @@ class DesirabilityToolController extends Controller
 
         if (count($ids_to_history_log)) {
             $undesirable_affiliates = UndesirableAffiliate::whereNotIn('id', $ids_to_history_log)
-            ->where([
-                'is_active' => 0,
-                'is_history_log' => 0
-            ]);
+                ->where([
+                    'is_active' => 0,
+                    'is_history_log' => 0
+                ]);
             $undesirable_affiliates->update(['is_history_log' => 1]);
         }
 
@@ -253,12 +253,17 @@ class DesirabilityToolController extends Controller
     {
         $undesirable_affiliate = UndesirableAffiliate::find($id);
 
+        $program_id = static::getProgramId($price_program);
+
         if ($workout_program_id > 0) {
             $workout_program = WorkoutProgram::find($workout_program_id);
             $data = [
-                'aff_price' => static::calculatePrice($undesirable_affiliate, $price_program),
+                'aff_price' => static::setPrice(
+                    $undesirable_affiliate->affiliate_id,
+                    $program_id,
+                    $undesirable_affiliate->country_code
+                ),
                 'updated_price_name' => $price_program,
-                'updated_price' => $undesirable_affiliate->aff_price,
                 'workout_program_id' => $workout_program->id,
                 'workout_duration' => intval($workout_program->duration),
                 'workout_set_date' => date("Y-m-d"),
@@ -275,33 +280,13 @@ class DesirabilityToolController extends Controller
     }
 
     /**
-     * @param $undesirable_affiliate
-     * @param $price_program
-     * @return float
-     */
-    protected static function calculatePrice($affiliate_data, $price_program = 'regular_cpa')
-    {
-        $regular_cpa = $affiliate_data->total_cost_126 / $affiliate_data->total_sales_126;
-
-        if ($price_program == 'premium_cpa') {
-            return $regular_cpa / 2;
-        } elseif ($price_program == 'spu') {
-//            return $regular_cpa * $affiliate_data->successful_premium_upgrades;
-            return 0;
-        } elseif ($price_program == 'rev_share') {
-            return $regular_cpa * 0.35;
-        } else {
-            return $regular_cpa;
-        }
-    }
-
-    /**
      * @param $metrics
      * @return array
      */
     private static function prepareUndesirableAffiliateData($metrics, $is_active)
     {
         $affiliate = Affiliate::find($metrics->affiliate_id);
+        $program_id = static::getCurrentProgramId($metrics->affiliate_id);
 
         $data = [
             'affiliate_id' => $affiliate->id,
@@ -313,8 +298,8 @@ class DesirabilityToolController extends Controller
             'aff_type' => $affiliate->affiliate_type,
             'aff_size' => UndesirableAffiliate::calculateAffiliateSize($metrics->total_cost),
             'date_added' => date("Y-m-d H:i:s", $affiliate->date_added),
-            'review_date' => date("Y-m-d H:i:s"),
-            'aff_price' => $metrics->total_cost_126 / $metrics->total_sales_126, //Regular CPA
+            'reviewed_date' => date("Y-m-d H:i:s"),
+            'aff_price' => static::setPrice($affiliate->id, $program_id, $affiliate->country_code), //Regular CPA
             'total_sales_126' => $metrics->total_sales_126,
             'total_cost_126' => $metrics->total_cost_126,
             'gross_margin_126' => $metrics->gross_margin_126,
@@ -328,6 +313,97 @@ class DesirabilityToolController extends Controller
         return $data;
     }
 
+    /**
+     * @param $affiliate_id
+     * @return int
+     */
+    private static function getCurrentProgramId($affiliate_id)
+    {
+        $query = "SELECT `program_id`  FROM  `affiliate_programs`  WHERE `affiliate_id` = " . $affiliate_id . " AND use_default_price = 0";
+
+        if ($program_id = DB::connection('staging')->select($query)) { //todo ask about
+            return $program_id;
+        } else {
+            return 241;
+        }
+    }
+
+    /**
+     * @param $price_program
+     * @return int
+     */
+    private static function getProgramId($price_program)
+    {
+        switch ($price_program) {
+            case 'regular_cpa':
+                return 241;
+                break;
+            case 'premium_cpa':
+                return 420;
+                break;
+            default:
+                return 241;
+        }
+    }
+
+    /**
+     * @param $affiliate_id
+     * @param $program_id
+     * @param $country_code
+     * @return int
+     */
+    public static function setPrice($affiliate_id, $program_id, $country_code)
+    {
+        $query = "SELECT payout_amount
+                  FROM affiliate_program_country_overrides
+                  WHERE affiliate_id=" . $affiliate_id . "
+                  AND program_id=" . $program_id . "
+                  AND country_code='" . $country_code . "'
+                  ";
+        $price = DB::connection('staging')->select($query);
+        if ($price) {
+            return $price[0]->payout_amount;
+        }
+
+        $query = "SELECT affiliate_price
+                  FROM affiliate_programs
+                  WHERE affiliate_id=" . $affiliate_id . "
+                  AND program_id=" . $program_id . "
+                  AND use_default_price=0
+                  ";
+        $price = DB::connection('staging')->select($query);
+        if ($price) {
+            return $price[0]->affiliate_price;
+        }
+
+        $query = "SELECT payout_amount
+                  FROM program_country_overrides
+                  WHERE program_id=" . $program_id . "
+                  AND country_code='" . $country_code . "'
+                  ";
+        $price = DB::connection('staging')->select($query);
+        if ($price) {
+            return $price[0]->payout_amount;
+        }
+
+
+        $query = "SELECT payout_amount
+                  FROM programs
+                  WHERE id=" . $program_id . "
+                  ";
+        $price = DB::connection('staging')->select($query);
+        if ($price) {
+            return $price[0]->payout_amount;
+        }
+
+        return 0;
+
+    }
+
+    /**
+     * @param $id
+     * @return bool
+     */
     public function sendEmail($id)
     {
         $data = [

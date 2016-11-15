@@ -37,7 +37,7 @@ class DesirabilityToolController extends Controller
      */
     public function getUndesirableAffiliatesData()
     {
-        return Datatables::eloquent(UndesirableAffiliate::where(['is_active' => '1']))->make(true);
+        return Datatables::eloquent(UndesirableAffiliate::where(['is_active' => 1]))->make(true);
     }
 
     /**
@@ -47,7 +47,7 @@ class DesirabilityToolController extends Controller
     public function getUndesirableAffiliateHistoryData($id)
     {
         return Datatables::eloquent(UndesirableAffiliate::where([
-            'is_active' => '0',
+            'is_active' => 0,
             'is_history_log' => 0,
             'affiliate_id' => $id
         ]))->make(true);
@@ -61,7 +61,7 @@ class DesirabilityToolController extends Controller
 
         $affiliate_history_log_data = UndesirableAffiliate::where([
             'affiliate_id' => $affiliate_id,
-            'is_active' => '0'
+            'is_active' => 0
         ])->get();
 
         return view('history_log', [
@@ -175,12 +175,12 @@ class DesirabilityToolController extends Controller
     public static function updateUndesirableAffiliate($affiliate_rows_data, $metrics)
     {
         foreach ($affiliate_rows_data as $affiliate_row_data) {
-            if (($affiliate_row_data->workout_program_id > 0 &&
-                $affiliate_row_data->is_active == '1')
+            if ((isset($affiliate_row_data->workout_program_id) &&
+                $affiliate_row_data->is_active == 1)
             ) { //todo logic
                 static::saveHistory($affiliate_row_data, $metrics);
-            } elseif (($affiliate_row_data->workout_program_id == 0 &&
-                $affiliate_row_data->is_active == '1')
+            } elseif ((!isset($affiliate_row_data->workout_program_id) &&
+                $affiliate_row_data->is_active == 1)
             ) {
                 print_r('Undesirable affiliate' . $metrics->affiliate_id . ' is not in program' . "\n");
                 print_r('Update affiliate ' . $metrics->affiliate_id . "\n");
@@ -217,18 +217,19 @@ class DesirabilityToolController extends Controller
             'is_history_log' => 0,
             'affiliate_id' => $affiliate->affiliate_id
         ])
-            ->groupBy('id')
+            ->orderBy('id', 'desc')
             ->limit($history_limit)
             ->pluck('id')
             ->toArray();
 
         if (count($ids_to_history_log)) {
-            $undesirable_affiliates = UndesirableAffiliate::whereNotIn('id', $ids_to_history_log)
-                ->where([
-                    'is_active' => 0,
-                    'is_history_log' => 0
-                ]);
-            $undesirable_affiliates->update(['is_history_log' => 1]);
+            $undesirable_affiliates = UndesirableAffiliate::where([
+                'affiliate_id' => $affiliate->affiliate_id,
+                'is_active' => 0,
+                'is_history_log' => 0
+            ])
+                ->whereNotIn('id', $ids_to_history_log)
+                ->update(['is_history_log' => 1]);
         }
 
         return true;
@@ -260,7 +261,7 @@ class DesirabilityToolController extends Controller
             'aff_type' => $undesirable_affiliate->aff_type,
         ])->first();
 
-        if ($workout_program_id > 0) {
+        if (isset($workout_program_id)) {
             $workout_program = WorkoutProgram::find($workout_program_id);
             $data = [
                 'aff_price' => static::setPrice(
@@ -316,8 +317,7 @@ class DesirabilityToolController extends Controller
             'desirability_scores' => $metrics->desirability_scores,
             'updated_price_name' => $program_price->price_name,
             'program_price_id' => $program_price->id,
-            'is_active' => $is_active,
-            'is_history_log' => 0
+            'is_active' => $is_active
         ];
 
         return $data;
@@ -401,7 +401,7 @@ class DesirabilityToolController extends Controller
         $data = [
             'email_sent_date' => date("Y-m-d H:i:s"),
             'email_status' => 'sent',
-            'is_informed' => '1',
+            'is_informed' => 1,
         ];
 
         $undesirable_affiliate = UndesirableAffiliate::find($id)->fill($data);

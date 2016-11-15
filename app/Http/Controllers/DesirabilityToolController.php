@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Affiliate;
 use Illuminate\Support\Facades\DB;
+
 use App\UndesirableAffiliate;
-use App\PriceProgram;
+use App\ProgramPrice;
 use App\WorkoutProgram;
+
 use Yajra\Datatables\Facades\Datatables;
 
 class DesirabilityToolController extends Controller
@@ -46,7 +48,7 @@ class DesirabilityToolController extends Controller
     {
         return Datatables::eloquent(UndesirableAffiliate::where([
             'is_active' => '0',
-            'is_history_log' => '0',
+            'is_history_log' => 0,
             'affiliate_id' => $id
         ]))->make(true);
     }
@@ -87,8 +89,7 @@ class DesirabilityToolController extends Controller
                             SUM(stats.num_disputes) AS num_disputes,
                             SUM(stats.num_disputes_126) AS num_disputes_126,
                             SUM(stats.total_cost_126) AS total_cost_126,
-                            SUM(stats.total_sales_126) AS total_sales_126,
-                            SUM(stats.successful_premium_upgrades) AS successful_premium_upgrades
+                            SUM(stats.total_sales_126) AS total_sales_126
                 FROM jomedia.members m
                 JOIN (
                       SELECT
@@ -101,11 +102,13 @@ class DesirabilityToolController extends Controller
                             SUM(CASE WHEN (transaction_type = 'refund') THEN 1 ELSE 0 END) AS num_refunds, SUM(CASE WHEN dispute_type = 'chargeback' THEN 1 ELSE 0 END) AS num_disputes,
                             SUM(CASE WHEN (dispute_type = 'chargeback' AND (start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126) AND (dispute_date - issue_date <= :days_126)) THEN 1 ELSE 0 END) AS num_disputes_126,
                             SUM(DISTINCT CASE WHEN ( payout_amount > 0 AND start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 ) THEN payout_amount ELSE 0 END) AS total_cost_126,
-                            COUNT(DISTINCT CASE WHEN ( start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 AND payout_amount > 0 ) THEN stats_m.member_id END) AS total_sales_126,
-                            COUNT(DISTINCT CASE WHEN stats_m.num_successful_rebills > 0 THEN stats_m.member_id END) AS successful_premium_upgrades
+                            COUNT(DISTINCT CASE WHEN ( start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 AND payout_amount > 0 ) THEN stats_m.member_id END) AS total_sales_126
                       FROM  jomedia.members stats_m
                       JOIN jomedia.transactions stats_t ON stats_t.member_id = stats_m.member_id
-                        WHERE issue_date >= :start_time AND stats_t.site_id <> 813 AND affiliate_id <> 0
+                        WHERE issue_date >= :start_time
+                        AND stats_t.site_id <> 813
+                        AND affiliate_id <> 0
+                        AND affiliate_id IN(" . $affiliate_ids . ")
                       GROUP BY stats_m.member_id
                 ) stats ON m.member_id = stats.member_id
                 WHERE  gross_settlements_total > 0 AND total_cost_126 > 0
@@ -246,24 +249,26 @@ class DesirabilityToolController extends Controller
     /**
      * @param $id
      * @param $workout_program_id
-     * @param $price_program
+     * @param $program_price
      * @return bool
      */
-    public function setProgram($id, $workout_program_id, $price_program)
+    public function setProgram($id, $workout_program_id, $price_name)
     {
         $undesirable_affiliate = UndesirableAffiliate::find($id);
-
-        $program_id = static::getProgramId($price_program);
+        $program_price = ProgramPrice::where([
+            'price_name' => $price_name,
+            'aff_type' => $undesirable_affiliate->aff_type,
+        ])->first();
 
         if ($workout_program_id > 0) {
             $workout_program = WorkoutProgram::find($workout_program_id);
             $data = [
                 'aff_price' => static::setPrice(
                     $undesirable_affiliate->affiliate_id,
-                    $program_id,
+                    $program_price->program_id,
                     $undesirable_affiliate->country_code
                 ),
-                'updated_price_name' => $price_program,
+                'updated_price_name' => $price_name,
                 'workout_program_id' => $workout_program->id,
                 'workout_duration' => intval($workout_program->duration),
                 'workout_set_date' => date("Y-m-d"),
@@ -286,7 +291,11 @@ class DesirabilityToolController extends Controller
     private static function prepareUndesirableAffiliateData($metrics, $is_active)
     {
         $affiliate = Affiliate::find($metrics->affiliate_id);
-        $program_id = static::getCurrentProgramId($metrics->affiliate_id);
+        $current_program_id = static::getCurrentProgramId($metrics->affiliate_id);
+        $program_price = ProgramPrice::where([
+            'aff_type' => $affiliate->affiliate_type,
+            'program_id' => $current_program_id,
+        ])->first();
 
         $data = [
             'affiliate_id' => $affiliate->id,
@@ -299,15 +308,16 @@ class DesirabilityToolController extends Controller
             'aff_size' => UndesirableAffiliate::calculateAffiliateSize($metrics->total_cost),
             'date_added' => date("Y-m-d H:i:s", $affiliate->date_added),
             'reviewed_date' => date("Y-m-d H:i:s"),
-            'aff_price' => static::setPrice($affiliate->id, $program_id, $affiliate->country_code), //Regular CPA
+            'aff_price' => static::setPrice($affiliate->id, $current_program_id, $affiliate->country_code), //Regular CPA
             'total_sales_126' => $metrics->total_sales_126,
             'total_cost_126' => $metrics->total_cost_126,
             'gross_margin_126' => $metrics->gross_margin_126,
             'num_disputes_126' => $metrics->num_disputes_126,
-//            'successful_premium_upgrades' => $metrics->successful_premium_upgrades,
             'desirability_scores' => $metrics->desirability_scores,
-            'updated_price_name' => 'regular_cpa',
-            'is_active' => $is_active
+            'updated_price_name' => $program_price->price_name,
+            'program_price_id' => $program_price->id,
+            'is_active' => $is_active,
+            'is_history_log' => 0
         ];
 
         return $data;
@@ -325,24 +335,6 @@ class DesirabilityToolController extends Controller
             return $program_id;
         } else {
             return 241;
-        }
-    }
-
-    /**
-     * @param $price_program
-     * @return int
-     */
-    private static function getProgramId($price_program)
-    {
-        switch ($price_program) {
-            case 'regular_cpa':
-                return 241;
-                break;
-            case 'premium_cpa':
-                return 420;
-                break;
-            default:
-                return 241;
         }
     }
 

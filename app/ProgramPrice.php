@@ -4,7 +4,7 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 
-class PriceProgram extends Model
+class ProgramPrice extends Model
 {
     /**
      * The connection name for the model.
@@ -18,5 +18,5 @@ class PriceProgram extends Model
      *
      * @var string
      */
-    protected $table = 'price_programs';
+    protected $table = 'program_prices';
 }

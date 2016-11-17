@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Affiliate;
 use Illuminate\Support\Facades\DB;
 
+use App\Affiliate;
 use App\UndesirableAffiliate;
 use App\ProgramPrice;
 use App\WorkoutProgram;
@@ -27,7 +27,7 @@ class DesirabilityToolController extends Controller
     /**
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View
      */
-    public function tool()
+    public function index()
     {
         return view('tool');
     }
@@ -53,6 +53,10 @@ class DesirabilityToolController extends Controller
         ]))->make(true);
     }
 
+    /**
+     * @param $affiliate_id
+     * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+     */
     public function getUndesirableAffiliateHistoryLogData($affiliate_id)
     {
         $affiliate = UndesirableAffiliate::where([
@@ -70,14 +74,48 @@ class DesirabilityToolController extends Controller
         ]);
     }
 
+    /**
+     * @param $id
+     * @param $workout_program_id
+     * @param $price_name
+     * @return bool
+     */
+    public function setWorkoutProgram($id, $workout_program_id, $price_name)
+    {
+        return UndesirableAffiliate::setWorkoutProgram($id, $workout_program_id, $price_name);
+    }
+
+    /**
+     * @param $id
+     * @return bool
+     */
+    public function sendEmail($id)
+    {
+        //todo send email logic
+        // the message
+        $msg = "First line of text\nSecond line of text";
+
+        // send email
+        if (mail("dudnik.maksim@hyuna.bb","test email",$msg)) {
+            $data = [
+                'email_sent_date' => date("Y-m-d H:i:s"),
+                'email_status' => 'sent',
+                'is_informed' => 1,
+            ];
+
+            $undesirable_affiliate = UndesirableAffiliate::find($id)->fill($data);
+
+            return ($undesirable_affiliate->update()) ? $undesirable_affiliate : false;
+        } else {
+            return false;
+        }
+    }
 
     /**
      *
      */
-    public function index()
+    public function cron()
     {
-//        $this->info('Fetching affiliates IDs registered more then 126 ago');
-
         $affiliate_ids = Affiliate::findAffiliatesIdForReview();
 
         $query = "SELECT    affiliate_id,
@@ -132,7 +170,7 @@ class DesirabilityToolController extends Controller
                     continue;
                 }
 
-                static::updateUndesirableAffiliate($undesirable_affiliate_rows_data, $metrics);
+                UndesirableAffiliate::updateByMetrics($undesirable_affiliate_rows_data, $metrics);
             } else {
                 if (!$affiliate = Affiliate::find($metrics->affiliate_id)) { //todo delete: check that affiliaite is exist in jomedia2 staging
                     continue;
@@ -143,7 +181,7 @@ class DesirabilityToolController extends Controller
                 }
 
                 print_r('Undesirable affiliate not exist and should be created: id' . $metrics->affiliate_id . "\n");
-                $undesirable_affiliate = static::createUndesirableAffiliate($metrics, 1);
+                $undesirable_affiliate = UndesirableAffiliate::createByMetrics($metrics, 1);
             }
         }
 
@@ -151,263 +189,6 @@ class DesirabilityToolController extends Controller
         die();
     }
 
-    /**
-     * @param $metrics
-     * @param $workout_program_id
-     * @return static
-     */
-    public static function createUndesirableAffiliate($metrics, $is_active)
-    {
-        UndesirableAffiliate::calculateDesirabilityScore($metrics);
-        $data = static::prepareUndesirableAffiliateData($metrics, $is_active);
-
-//        $data['desirability_scores'] = -3; //todo delete it`s for test
-//        $data['gross_margin_126'] = 0.333; //todo delete it`s for test
-
-        return UndesirableAffiliate::create($data);
-    }
-
-    /**
-     * @param $affiliate
-     * @param $metrics
-     * @return bool
-     */
-    public static function updateUndesirableAffiliate($affiliate_rows_data, $metrics)
-    {
-        foreach ($affiliate_rows_data as $affiliate_row_data) {
-            if ((isset($affiliate_row_data->workout_program_id) &&
-                $affiliate_row_data->is_active == 1)
-            ) { //todo logic
-                static::saveHistory($affiliate_row_data, $metrics);
-            } elseif ((!isset($affiliate_row_data->workout_program_id) &&
-                $affiliate_row_data->is_active == 1)
-            ) {
-                print_r('Undesirable affiliate' . $metrics->affiliate_id . ' is not in program' . "\n");
-                print_r('Update affiliate ' . $metrics->affiliate_id . "\n");
-
-                UndesirableAffiliate::calculateDesirabilityScore($metrics);
-                $data = static::prepareUndesirableAffiliateData($metrics, 1);
-
-//                $data['desirability_scores'] = -6; //todo delete it`s for test
-//                $data['gross_margin_126'] = 0.222; //todo delete it`s for test
-
-
-                $undesirable_affiliate = UndesirableAffiliate::find($affiliate_row_data->id)->update($data);
-            }
-        }
-        return true;
-    }
-
-    /**
-     * @param $affiliate
-     * @param $metrics
-     */
-    public static function saveHistory($affiliate, $metrics)
-    {
-        static::createUndesirableAffiliate($metrics, 0);
-
-        if ($affiliate->workout_duration) {
-            $history_limit = $affiliate->workout_duration / 30;
-        } else {
-            $history_limit = 6;
-        }
-
-        $ids_to_history_log = UndesirableAffiliate::where([
-            'is_active' => 0,
-            'is_history_log' => 0,
-            'affiliate_id' => $affiliate->affiliate_id
-        ])
-            ->orderBy('id', 'desc')
-            ->limit($history_limit)
-            ->pluck('id')
-            ->toArray();
-
-        if (count($ids_to_history_log)) {
-            $undesirable_affiliates = UndesirableAffiliate::where([
-                'affiliate_id' => $affiliate->affiliate_id,
-                'is_active' => 0,
-                'is_history_log' => 0
-            ])
-                ->whereNotIn('id', $ids_to_history_log)
-                ->update(['is_history_log' => 1]);
-        }
-
-        return true;
-    }
-
-    /**
-     * @param $id
-     */
-    public static function updateHistory($affiliate_id)
-    {
-        return UndesirableAffiliate::where([
-            'is_active' => 0,
-            'is_history_log' => 0,
-            'affiliate_id' => $affiliate_id
-        ])->update(['is_history_log' => 1]);
-    }
-
-    /**
-     * @param $id
-     * @param $workout_program_id
-     * @param $program_price
-     * @return bool
-     */
-    public function setProgram($id, $workout_program_id, $price_name)
-    {
-        $undesirable_affiliate = UndesirableAffiliate::find($id);
-        $program_price = ProgramPrice::where([
-            'price_name' => $price_name,
-            'aff_type' => $undesirable_affiliate->aff_type,
-        ])->first();
-
-        if (isset($workout_program_id)) {
-            $workout_program = WorkoutProgram::find($workout_program_id);
-            $data = [
-                'aff_price' => static::setPrice(
-                    $undesirable_affiliate->affiliate_id,
-                    $program_price->program_id,
-                    $undesirable_affiliate->country_code
-                ),
-                'updated_price_name' => $price_name,
-                'workout_program_id' => $workout_program->id,
-                'workout_duration' => intval($workout_program->duration),
-                'workout_set_date' => date("Y-m-d"),
-                'program_status' => 1,
-                'email_status' => ($undesirable_affiliate->is_informed == 0) ? 'not_sent' : 'sent'
-            ];
-        }
-
-        $undesirable_affiliate->fill($data);
-
-        static::updateHistory($undesirable_affiliate->affiliate_id);
-
-        return ($undesirable_affiliate->update()) ? $undesirable_affiliate : false;
-    }
-
-    /**
-     * @param $metrics
-     * @return array
-     */
-    private static function prepareUndesirableAffiliateData($metrics, $is_active)
-    {
-        $affiliate = Affiliate::find($metrics->affiliate_id);
-        $current_program_id = static::getCurrentProgramId($metrics->affiliate_id);
-        $program_price = ProgramPrice::where([
-            'aff_type' => $affiliate->affiliate_type,
-            'program_id' => $current_program_id,
-        ])->first();
-
-        $data = [
-            'affiliate_id' => $affiliate->id,
-            'aff_first_name' => $affiliate->first_name,
-            'aff_last_name' => $affiliate->last_name,
-            'aff_email' => $affiliate->email,
-            'aff_status' => $affiliate->status,
-            'country_code' => $affiliate->country_code,
-            'aff_type' => $affiliate->affiliate_type,
-            'aff_size' => UndesirableAffiliate::calculateAffiliateSize($metrics->total_cost),
-            'date_added' => date("Y-m-d H:i:s", $affiliate->date_added),
-            'reviewed_date' => date("Y-m-d H:i:s"),
-            'aff_price' => static::setPrice($affiliate->id, $current_program_id, $affiliate->country_code), //Regular CPA
-            'total_sales_126' => $metrics->total_sales_126,
-            'total_cost_126' => $metrics->total_cost_126,
-            'gross_margin_126' => $metrics->gross_margin_126,
-            'num_disputes_126' => $metrics->num_disputes_126,
-            'desirability_scores' => $metrics->desirability_scores,
-            'updated_price_name' => $program_price->price_name,
-            'program_price_id' => $program_price->id,
-            'is_active' => $is_active
-        ];
-
-        return $data;
-    }
-
-    /**
-     * @param $affiliate_id
-     * @return int
-     */
-    private static function getCurrentProgramId($affiliate_id)
-    {
-        $query = "SELECT `program_id`  FROM  `affiliate_programs`  WHERE `affiliate_id` = " . $affiliate_id . " AND use_default_price = 0";
-
-        if ($program_id = DB::connection('staging')->select($query)) { //todo ask about
-            return $program_id;
-        } else {
-            return 241;
-        }
-    }
-
-    /**
-     * @param $affiliate_id
-     * @param $program_id
-     * @param $country_code
-     * @return int
-     */
-    public static function setPrice($affiliate_id, $program_id, $country_code)
-    {
-        $query = "SELECT payout_amount
-                  FROM affiliate_program_country_overrides
-                  WHERE affiliate_id=" . $affiliate_id . "
-                  AND program_id=" . $program_id . "
-                  AND country_code='" . $country_code . "'
-                  ";
-        $price = DB::connection('staging')->select($query);
-        if ($price) {
-            return $price[0]->payout_amount;
-        }
-
-        $query = "SELECT affiliate_price
-                  FROM affiliate_programs
-                  WHERE affiliate_id=" . $affiliate_id . "
-                  AND program_id=" . $program_id . "
-                  AND use_default_price=0
-                  ";
-        $price = DB::connection('staging')->select($query);
-        if ($price) {
-            return $price[0]->affiliate_price;
-        }
-
-        $query = "SELECT payout_amount
-                  FROM program_country_overrides
-                  WHERE program_id=" . $program_id . "
-                  AND country_code='" . $country_code . "'
-                  ";
-        $price = DB::connection('staging')->select($query);
-        if ($price) {
-            return $price[0]->payout_amount;
-        }
-
-
-        $query = "SELECT payout_amount
-                  FROM programs
-                  WHERE id=" . $program_id . "
-                  ";
-        $price = DB::connection('staging')->select($query);
-        if ($price) {
-            return $price[0]->payout_amount;
-        }
-
-        return 0;
-
-    }
-
-    /**
-     * @param $id
-     * @return bool
-     */
-    public function sendEmail($id)
-    {
-        $data = [
-            'email_sent_date' => date("Y-m-d H:i:s"),
-            'email_status' => 'sent',
-            'is_informed' => 1,
-        ];
-
-        $undesirable_affiliate = UndesirableAffiliate::find($id)->fill($data);
-
-        return ($undesirable_affiliate->update()) ? $undesirable_affiliate : false;
-    }
 
     /**
      * Replace the bindings with their real value for the query.

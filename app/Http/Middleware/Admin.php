@@ -16,11 +16,11 @@ class Admin
      */
     public function handle($request, Closure $next)
     {
-        if (\Auth::user()->is_admin == 1)
+        if (Auth::check() && Auth::user()->isAdmin())
         {
             return $next($request);
         }
 
-        return redirect()->guest('/');
+        return redirect('/desirability-tool');
     }
 }

@@ -5859,6 +5859,10 @@ button.close {
 }
 
 .history-data {
+  position: relative;
+  display: block;
+  height:40px;
+  padding: 10px 0;
   background-color: #ffd5cb;
   border: 1px solid #ccc;
 }
@@ -5899,8 +5903,7 @@ button.close {
 }
 
 .navbar {
-  padding: 15px 0;
-  background-color: rgba(21, 23, 25, 0.71);
+  padding: 10px 0;
 }
 
 .navbar > .container {
@@ -5910,12 +5913,7 @@ button.close {
 
 .navbar-brand {
   font-weight: bold;
-  font-size: 26px;
-  color: #fff !important;
-}
-
-.navbar-right .dropdown-toggle {
-  color: #fff !important;
+  font-size: 22px;
 }
 
 .email_status,
@@ -5939,4 +5937,19 @@ button.close {
 .preloader {
   float: left;
   display: none;
+}
+
+.administration-link {
+  padding: 14px;
+  display: block;
+  float: left;
+  color: #777;
+}
+
+.administration-link:hover {
+  color: #5e5e5e;
+}
+
+.is_admin {
+  width: 60px;
 }

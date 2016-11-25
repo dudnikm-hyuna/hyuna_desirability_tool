@@ -68,6 +68,9 @@
                     Are you sure you want to send email?
                 </div>
                 <div class="modal-footer">
+                    <div class="preloader">
+                        <img src="/img/preloader.gif" alt="">
+                    </div>
                     <button type="button" class="btn btn-default" data-dismiss="modal">No</button>
                     <button type="button" class="btn btn-primary" id="send-email-confirm">Yes</button>
                 </div>
@@ -81,7 +84,7 @@
     $(document).ready(function () {
         var table = $('#undesirable_affiliates').DataTable({
             ajax: '{{ url("undesirable-affiliates-data") }}',
-            "paging": false,
+            "paging": true,
             "columns": [
                 {"data": "affiliate_name", "className": "affiliate_name"},
                 {"data": "affiliate_id"},
@@ -89,7 +92,7 @@
                 {"data": "country_code"},
                 {"data": "aff_type"},
                 {"data": "aff_size"},
-                {"data": "date_added"},
+                {"data": "date_added", "className": "date_added"},
                 {"data": "reviewed_date", "className": "reviewed_date"},
                 {"data": "aff_price", "className": "affiliate_price"},
                 {"data": "total_sales_126", "className": "total_sales_126"},
@@ -189,13 +192,14 @@
                         var currentTime = Date.now();
                         var pendingTime = +new Date(emailSentTime + 2*24*60*60*1000);
                         var wp_set_date = Date.parse(row.workout_set_date) || 0;
+                        var disabled = (row.workout_program_id) ? '' : 'disabled';
 
                         if (row.workout_duration != 0 && wp_set_date != 0) {
                             var wp_end_date = new Date(wp_set_date + row.workout_duration*24*60*60*1000);
                         }
 
                         if (data == 'send') {
-                            return '<span class="cell-data-container"><button data-id="' + row.id + '" class="btn-send-email">Send email</button></span>';
+                            return '<span class="cell-data-container"><button data-id="' + row.id + '" class="btn btn-default btn-xs ' + disabled + ' btn-send-email">Send email</button></span>';
                         } else if (data == 'not_sent') {
                             return '<span class="cell-data-container">Not sent email</span>';
                         } else if (data == 'sent') {
@@ -289,10 +293,11 @@
 
             var id = $(this).closest('.cell-data-container').attr("data-id");
             if (program_status == 1) {
-                tr.find(".program_status > .cell-data-container").html('<button data-id="' + id + '" class="btn-set-program">Set program</button>');
-                tr.find(".email_status > .cell-data-container").html('<button data-id="' + id + '" class="btn-send-email">Send email</button>');
+                tr.find(".program_status > .cell-data-container").html('<button data-id="' + id + '" class="btn btn-default btn-xs btn-set-program">Set program</button>');
+                tr.find(".email_status > .cell-data-container").html('<button data-id="' + id + '" class="btn btn-default btn-xs btn-send-email">Send email</button>');
             } else {
-                tr.find(".program_status > .cell-data-container").html('<button data-id="' + id + '" class="btn-set-program">Set program</button>');
+                tr.find('.btn-send-email').removeClass('disabled');
+                tr.find(".program_status > .cell-data-container").html('<button data-id="' + id + '" class="btn btn-default btn-xs btn-set-program">Set program</button>');
             }
         });
 
@@ -336,6 +341,9 @@
         });
 
         $("#undesirable_affiliates").on("click", ".btn-send-email", function(){
+            if ($(this).hasClass('disabled')) {
+                return false;
+            }
             var id = $(this).attr("data-id");
             var tr = $(this).closest("tr");
 
@@ -350,12 +358,15 @@
             var id = $(this).attr("data-id");
             var tr = $(document).find("tr[data-id=" + id + "]");
 
+            $(".preloader").show();
+
             $.ajax({
                         method: "GET",
                         url: '{{ url("send-email") }}' + '/' + id,
                     })
                     .done(function (underisable_affiliate) {
                         table.row(tr).data(underisable_affiliate);
+                        $(".preloader").hide();
                         $('#send-email-modal').modal('hide');
                     });
         });

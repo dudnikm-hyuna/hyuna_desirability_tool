@@ -80,6 +80,23 @@ return [
             'engine' => null,
         ],
 
+        'jomedia2_prod' => [
+            'driver' => 'mysql',
+            'host' => env('DB_HOST_JOMEDIA2_PROD', 'localhost'),
+            'port' => env('DB_PORT_JOMEDIA2_PROD', '3306'),
+            'database' => env('DB_DATABASE_JOMEDIA2_PROD', 'jomedia2'),
+            'username' => env('DB_USERNAME_JOMEDIA2_PROD', 'root'),
+            'password' => env('DB_PASSWORD_JOMEDIA2_PROD', 'root'),
+            'charset' => 'utf8',
+            'collation' => 'utf8_unicode_ci',
+            'prefix' => '',
+            'strict' => false,
+            'engine' => null,
+            'options'   => array(
+                PDO::MYSQL_ATTR_SSL_CA    => '/home/jomedia_78/cert/ca-cert.pem'
+            ),
+        ],
+
         'redshift' => [
             'driver' => 'pgsql',
             'host' => env('DB_REDSHIFT_HOST', 'localhost'),
@@ -87,6 +104,19 @@ return [
             'database' => env('DB_REDSHIFT_DATABASE', 'forge'),
             'username' => env('DB_REDSHIFT_USERNAME', 'forge'),
             'password' => env('DB_REDSHIFT_PASSWORD', ''),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'schema' => 'jomedia',
+            'sslmode' => 'require',
+        ],
+
+        'redshift_prod' => [
+            'driver' => 'pgsql',
+            'host' => env('DB_REDSHIFT_PROD_HOST', 'localhost'),
+            'port' => env('DB_REDSHIFT_PROD_PORT', '5439'),
+            'database' => env('DB_REDSHIFT_PROD_DATABASE', 'forge'),
+            'username' => env('DB_REDSHIFT_PROD_USERNAME', 'forge'),
+            'password' => env('DB_REDSHIFT_PROD_PASSWORD', ''),
             'charset' => 'utf8',
             'prefix' => '',
             'schema' => 'jomedia',

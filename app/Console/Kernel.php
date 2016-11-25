@@ -25,7 +25,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $schedule->command('undesirable_affiliates:fetch')->daily();
+        $schedule->command('undesirable_affiliates:fetch')->monthlyOn(6, '01:00');
     }
 
     /**

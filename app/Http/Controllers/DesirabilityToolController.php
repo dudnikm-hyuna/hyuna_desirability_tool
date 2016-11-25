@@ -10,6 +10,8 @@ use App\UndesirableAffiliate;
 use App\ProgramPrice;
 use App\WorkoutProgram;
 
+use App\Mail\AffiliateNotified;
+use Illuminate\Support\Facades\Mail;
 use Yajra\Datatables\Facades\Datatables;
 
 class DesirabilityToolController extends Controller
@@ -91,29 +93,24 @@ class DesirabilityToolController extends Controller
      */
     public function sendEmail($id)
     {
-        //todo send email logic
-        // the message
-        $msg = "First line of text\nSecond line of text";
+        $undesirable_affiliate = UndesirableAffiliate::find($id);
+        $message = (new AffiliateNotified($undesirable_affiliate))
+            ->onConnection('redis')
+            ->onQueue('emails');
 
-        // send email
-        if (mail("dudnik.maksim@hyuna.bb","test email",$msg)) {
-            $data = [
-                'email_sent_date' => date("Y-m-d H:i:s"),
-                'email_status' => 'sent',
-                'is_informed' => 1,
-            ];
+//        Mail::to($undesirable_affiliate)
+//            ->queue($message);
 
-            $undesirable_affiliate = UndesirableAffiliate::find($id)->fill($data);
+        $data = [
+            'email_sent_date' => date("Y-m-d H:i:s"),
+            'email_status' => 'sent',
+            'is_informed' => 1,
+        ];
+        $undesirable_affiliate->fill($data);
 
-            return ($undesirable_affiliate->update()) ? $undesirable_affiliate : false;
-        } else {
-            return false;
-        }
+        return ($undesirable_affiliate->update()) ? $undesirable_affiliate : false;
     }
 
-    /**
-     *
-     */
     public function cron()
     {
         $affiliate_ids = Affiliate::findAffiliatesIdForReview();
@@ -143,7 +140,7 @@ class DesirabilityToolController extends Controller
                             COUNT(DISTINCT CASE WHEN ( start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 AND payout_amount > 0 ) THEN stats_m.member_id END) AS total_sales_126
                       FROM  jomedia.members stats_m
                       JOIN jomedia.transactions stats_t ON stats_t.member_id = stats_m.member_id
-                        WHERE issue_date >= :start_time
+                        WHERE issue_date  BETWEEN :start_time AND :end_time
                         AND stats_t.site_id <> 813
                         AND affiliate_id <> 0
                         AND affiliate_id IN(" . $affiliate_ids . ")
@@ -153,35 +150,27 @@ class DesirabilityToolController extends Controller
                 GROUP BY affiliate_id"; //todo set appropriate filters and params
 
         $params = array(
-            ":start_time" => strtotime("-1156 days"), //todo change to  -126 or -156
+            ":start_time" => strtotime("-156 days"),
+            ":end_time" => strtotime("-126 days"),
             ":days_126" => 126 * 86400,
         );
 
         $query = static::prepareQuery($query, $params);
 
-        $affiliates_initial_metrics = DB::connection('redshift')->select($query);
+        $affiliates_initial_metrics = DB::connection('redshift_prod')->select($query);
 
         foreach ($affiliates_initial_metrics as $metrics) {
             $undesirable_affiliate_rows_data = UndesirableAffiliate::where('affiliate_id', $metrics->affiliate_id)->get();
-
             if (count($undesirable_affiliate_rows_data)) {
                 print_r('Undesirable affiliate is exist and should be updated: id' . $metrics->affiliate_id . "\n");
-                if (!$affiliate = Affiliate::find($metrics->affiliate_id)) { //todo delete: check that affiliaite is exist in jomedia2 staging
-                    continue;
-                }
-
                 UndesirableAffiliate::updateByMetrics($undesirable_affiliate_rows_data, $metrics);
             } else {
-                if (!$affiliate = Affiliate::find($metrics->affiliate_id)) { //todo delete: check that affiliaite is exist in jomedia2 staging
-                    continue;
-                }
-
-                if (UndesirableAffiliate::calculateDesirabilityScore($metrics) > 0 && $metrics->total_cost >= 1500) { //todo change to total_cost<150
+                if (UndesirableAffiliate::calculateDesirabilityScore($metrics) > 0 || $metrics->total_cost < 150) { //todo change to total_cost<150
                     continue;
                 }
 
                 print_r('Undesirable affiliate not exist and should be created: id' . $metrics->affiliate_id . "\n");
-                $undesirable_affiliate = UndesirableAffiliate::createByMetrics($metrics, 1);
+                UndesirableAffiliate::createByMetrics($metrics, 1);
             }
         }
 

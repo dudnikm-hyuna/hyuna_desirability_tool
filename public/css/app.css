@@ -5775,12 +5775,14 @@ button.close {
 }
 
 #undesirable_affiliates,
+№users-list,
 #undesirable_affiliate_history_log,
 #undesirable_affiliate_info{
   font-size: 12px;
 }
 
 #undesirable_affiliates th,
+#users-list th,
 #undesirable_affiliate_history_log th,
 #undesirable_affiliate_info th{
   font-size: 12px;
@@ -5952,4 +5954,10 @@ button.close {
 
 .is_admin {
   width: 60px;
+}
+
+.workout_set_date,
+.reviewed_date,
+.date_added {
+  width: 80px;
 }

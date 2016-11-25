@@ -3,11 +3,11 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 
 use App\Affiliate;
 use App\ProgramPrice;
 use App\WorkoutProgram;
+use App\AffiliateProgram;
 
 class UndesirableAffiliate extends Model
 {
@@ -156,15 +156,12 @@ class UndesirableAffiliate extends Model
      */
     private static function getCurrentProgramId($affiliate_id)
     {
-        $query = "SELECT `program_id`  FROM  `affiliate_programs`
-                  WHERE `affiliate_id` = " . $affiliate_id . "
-                  AND use_default_price = 0";
+        $affiliate_program = AffiliateProgram::where([
+            'affiliate_id' => $affiliate_id
+        ])->whereIn('program_id', [241, 408, 420])->first();
 
-        if ($program_id = DB::connection('staging')->select($query)) { //todo ask about
-            return $program_id;
-        } else {
-            return 241;
-        }
+
+        return $affiliate_program->program_id;
     }
 
     /**
@@ -175,77 +172,47 @@ class UndesirableAffiliate extends Model
      */
     private static function setPrice($affiliate_id, $program_id, $country_code)
     {
-        $query = "SELECT payout_amount
-                  FROM affiliate_program_country_overrides
-                  WHERE affiliate_id=" . $affiliate_id . "
-                  AND program_id=" . $program_id . "
-                  AND country_code='" . $country_code . "'
-                  ";
-        $price = DB::connection('staging')->select($query);
-        if ($price) {
-            return $price[0]->payout_amount;
+        //step 1
+        $affiliate_program_country_override = AffiliateProgramCountryOverride::where([
+            'affiliate_id' => $affiliate_id,
+            'program_id' => $program_id,
+            'country_code' => $country_code,
+        ])->first();
+
+        if($affiliate_program_country_override) {
+            return $affiliate_program_country_override->payout_amount;
         }
 
-        $query = "SELECT affiliate_price
-                  FROM affiliate_programs
-                  WHERE affiliate_id=" . $affiliate_id . "
-                  AND program_id=" . $program_id . "
-                  AND use_default_price=0
-                  ";
-        $price = DB::connection('staging')->select($query);
-        if ($price) {
-            return $price[0]->affiliate_price;
+        //step 2
+        $affiliate_program = AffiliateProgram::where([
+            'affiliate_id' => $affiliate_id,
+            'program_id' => $program_id,
+            'use_default_price' => 0,
+        ])->first();
+
+        if($affiliate_program) {
+            return $affiliate_program->affiliate_price;
         }
 
-        $query = "SELECT payout_amount
-                  FROM program_country_overrides
-                  WHERE program_id=" . $program_id . "
-                  AND country_code='" . $country_code . "'
-                  ";
-        $price = DB::connection('staging')->select($query);
-        if ($price) {
-            return $price[0]->payout_amount;
+        //step 3
+        $program_country_override = ProgramCountryOverride::where([
+            'program_id' => $program_id,
+            'country_code' => $country_code,
+        ])->first();
+
+        if($program_country_override) {
+            return $program_country_override->payout_amount;
         }
 
+        //step 4
+        $program = Program::where([
+            'id' => $program_id,
+        ])->first();
 
-        $query = "SELECT payout_amount
-                  FROM programs
-                  WHERE id=" . $program_id . "
-                  ";
-        $price = DB::connection('staging')->select($query);
-        if ($price) {
-            return $price[0]->payout_amount;
+        if($program) {
+            return $program->payout_amount;
         }
 
-        return 0;
-    }
-
-
-    private static function prepareHistoryData($metrics, $affiliate, $is_active)
-    {
-        $data = [
-            'affiliate_id' => $affiliate->id,
-            'aff_first_name' => $affiliate->first_name,
-            'aff_last_name' => $affiliate->last_name,
-            'aff_email' => $affiliate->email,
-            'aff_status' => $affiliate->status,
-            'country_code' => $affiliate->country_code,
-            'aff_type' => $affiliate->affiliate_type,
-            'aff_size' => static::calculateAffiliateSize($metrics->total_cost),
-            'date_added' => date("Y-m-d H:i:s", $affiliate->date_added),
-            'reviewed_date' => $affiliate->reviewed_date,
-            'aff_price' => $affiliate->aff_price,
-            'total_sales_126' => $metrics->total_sales_126,
-            'total_cost_126' => $metrics->total_cost_126,
-            'gross_margin_126' => $metrics->gross_margin_126,
-            'num_disputes_126' => $metrics->num_disputes_126,
-            'desirability_scores' => $metrics->desirability_scores,
-            'updated_price_name' => $affiliate->updated_price_name,
-            'program_price_id' => $affiliate->program_price_id,
-            'is_active' => $is_active
-        ];
-
-        return $data;
     }
 
     /**
@@ -333,15 +300,12 @@ class UndesirableAffiliate extends Model
      */
     public static function calculateDesirabilityScore(&$metrics)
     {
-        $min_gm = 0.35;
+        $min_gm =  config('constants.min_gross_margin');
         $aff_gm_126 = static::calculateGrossMargin($metrics);
 
         $metrics->gross_margin_126 = $aff_gm_126;
 
         $score = 0;
-
-        // from % to decimal format (e.g. 0.45)
-        $aff_gm_126 = $aff_gm_126 / 100;
 
         if ($aff_gm_126 < 0) {
             $score = -10;
@@ -382,10 +346,7 @@ class UndesirableAffiliate extends Model
      */
     public static function calculateProcessingCost($num_transactions, $num_disputes)
     {
-        $transaction_fee = 0.2;
-        $CB_processing_fee = 20.00;
-
-        return $num_transactions * $transaction_fee + $num_disputes * $CB_processing_fee;
+        return $num_transactions * config('constants.transaction_fee') + $num_disputes * config('constants.CB_processing_fee');
     }
 
     /**

@@ -26,7 +26,7 @@ class Affiliate extends Model
         $ids =  AffiliateProgram::whereIn('program_id', [241, 408, 420])->pluck('affiliate_id')
             ->toArray();
 
-        $ids = array_slice($ids, 0, 200, true); //todo delete(for test)
+        $ids = array_slice($ids, 0, 500, true); //todo delete(for test)
 
         $affiliate_ids = Affiliate::where('date_added', '<', strtotime("-126 days"))
             ->whereIn('status', ['active', 'suspended'])

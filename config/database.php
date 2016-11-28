@@ -93,7 +93,7 @@ return [
             'strict' => false,
             'engine' => null,
             'options'   => array(
-                PDO::MYSQL_ATTR_SSL_CA    => '/home/jomedia_78/cert/ca-cert.pem'
+                PDO::MYSQL_ATTR_SSL_CA    => '/etc/jomedia/mysql-certs/ca-cert.pem'
             ),
         ],
 

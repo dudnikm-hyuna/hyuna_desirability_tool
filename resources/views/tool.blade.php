@@ -13,14 +13,15 @@
                 <th>Affiliate Size</th>
                 <th>Date Added</th>
                 <th>Review Date</th>
-                <th>Affiliate Price</th>
+                <th>Avg CPS</th>
                 <th>Total Sales 126</th>
                 <th>Total Cost 126</th>
                 <th>Gross Margin 126</th>
                 <th>Num Disputes 126</th>
                 <th>Desirability Score</th>
                 <th>Workout Program</th>
-                <th>Updated Price Name</th>
+                <th>Original Price Program</th>
+                <th>Updated Price Program</th>
                 <th>Workout duration</th>
                 <th>WP Set Date</th>
                 <th>Program status</th>
@@ -101,7 +102,8 @@
                 {"data": "num_disputes_126", "className": "num_disputes_126"},
                 {"data": "desirability_scores", "className": "desirability_scores"},
                 {"data": "workout_program_id", "className": "workout_program_id"},
-                {"data": "updated_price_name", "className": "updated_price_name"},
+                {"data": "original_price_program", "className": "original_price_program"},
+                {"data": "updated_price_program", "className": "updated_price_program"},
                 {"data": "workout_duration", "className": "workout_duration"},
                 {"data": "workout_set_date", "className": "workout_set_date"}, //17
                 {"data": "program_status", "className": "program_status"},
@@ -116,20 +118,38 @@
                     "render": function (data, type, row) {
                         return    '<span class="cell-data-container">' + formatDate(data) + '</span>';
                     },
-                    "targets": [6, 7, 17]
+                    "targets": [6, 7, 18]
                 },
                 { // affilaite name
                     "render": function (data, type, row) {
                         return '<span class="cell-data-container">' +
-                                '<a href="{{ url("undesirable-affiliate") }}' + '/' + row.affiliate_id +'">' + row.aff_first_name + ' ' + row.aff_last_name + '</a> ' +
-                                '<span data-affiliate-id="' + row.affiliate_id + '"' +
-                                'class="btn-history glyphicon glyphicon-header"' +
-                                'data-toggle="tooltip" title="Show history">' +
-                                '</span>' +
-                                '<span class="btn-remove-history glyphicon glyphicon-remove"></span>' +
+                                    '<a href="{{ url("undesirable-affiliate") }}' + '/' + row.affiliate_id +'">' + row.name + '</a> ' +
+                                    '<span data-affiliate-id="' + row.affiliate_id + '"' +
+                                        'class="btn-history glyphicon glyphicon-header"' +
+                                        'data-toggle="tooltip" title="Show history">' +
+                                    '</span>' +
+                                    '<span class="btn-remove-history glyphicon glyphicon-remove"></span>' +
+                                    '<a href="{{ url("undesirable-affiliates-stats-by-country") }}' + '/' + row.affiliate_id +'">' +
+                                        '<span data-affiliate-id="' + row.affiliate_id + '"' +
+                                        'class="btn-country-info glyphicon glyphicon-globe"' +
+                                        'data-toggle="tooltip" title="Stats by contry">' +
+                                        '</span>' +
+                                    '</a>' +
                                 '</span>';
                     },
                     "targets": 0
+                },
+                { // affilaite price (Avg CPS), total_cost_126
+                    "render": function (data, type, row) {
+                        return '<span class="cell-data-container">$' + data + '</span>';
+                    },
+                    "targets": [8,10]
+                },
+                { // gross_margin_126
+                    "render": function (data, type, row) {
+                        return '<span class="cell-data-container">' + parseFloat((data*100).toFixed(2)) + '%' + '</span>';
+                    },
+                    "targets": 11
                 },
                 { //workout program
                     "render": function (data, type, row) {
@@ -142,7 +162,7 @@
                         } else {
                             var options = '';
                             var wp_id;
-                            for (wp_id = 1; wp_id <= 2; wp_id++) {
+                            for (wp_id = 1; wp_id <= 4; wp_id++) {
                                 var is_selected = (wp_id == data) ? 'selected' : '';
                                 options += '<option class="wp_' + wp_id + '" ' + is_selected + ' value="' + wp_id + '">' + wp_id + '</option>';
                             }
@@ -159,17 +179,9 @@
                 },
                 { //updated price name
                     "render": function (data, type, row) {
-                        if (data == 'regular_cpa') {
-                            return '<span class="cell-data-container" data-program-price="regular_cpa">Regular CPA</span>';
-                        } else if (data == 'premium_cpa') {
-                            return '<span class="cell-data-container" data-program-price="premium_cpa">Premium CPA</span>';
-                        } else if (data == 'spu') {
-                            return '<span class="cell-data-container" data-program-price="spu">SPU</span>';
-                        } else if (data == 'rev_share') {
-                            return '<span class="cell-data-container" data-program-price="rev_share">Rev Share</span>';
-                        }
+                        return '<span class="cell-data-container" data-program-price=' + data + '>' + data + '</span>';
                     },
-                    "targets": 15
+                    "targets": 16
                 },
                 { // program status
                     "render": function (data, type, row) {
@@ -184,7 +196,7 @@
                             return '<span class="cell-data-container" data-program-status="1">' + status + '</span>';
                         }
                     },
-                    "targets": 18
+                    "targets": 19
                 },
                 { // email status
                     "render": function (data, type, row) {
@@ -214,7 +226,7 @@
                             return '<span class="cell-data-container">' + row.email_sent_date + '</span>';
                         }
                     },
-                    "targets": 20
+                    "targets": 21
                 },
                 {
                     "render": function (data, type, row) {
@@ -222,7 +234,7 @@
                     },
                     "targets": '_all'
                 },
-                { "visible": false, "targets": [19, 21, 22, 23] }
+                { "visible": false, "targets": [20, 22, 23, 24] }
             ]
         });
 
@@ -269,26 +281,26 @@
         $("#undesirable_affiliates").on("change",".wp-list", function(){
             var wp_id = $(this).val();
             var tr = $(this).closest("tr");
-            var updated_price_container = tr.find(".updated_price_name > .cell-data-container");
+            var updated_price_container = tr.find(".updated_price_program > .cell-data-container");
             var program_status = tr.find("[data-program-status]").attr("data-program-status");
 
             $(this).closest(".cell-data-container").removeClass().addClass("cell-data-container wp_" + wp_id);
 
             if (wp_id == 3) {
                 updated_price_container.html('<select class="price-program-list">' +
-                        '<option value="regular_cpa">Regular CPA</option>' +
-                        '<option value="premium_cpa">Premium CPA</option>' +
-                        '<option value="spu">SPU</option>' +
+                        '<option value="regular_cpa">regular_cpa</option>' +
+                        '<option value="premium_cpa">premium_cpa</option>' +
+                        '<option value="spu">spu</option>' +
                         '</select>');
             } else if (wp_id == 2){
                 updated_price_container.attr("data-program-price", "premium_cpa");
-                updated_price_container.html("Premium CPA");
+                updated_price_container.html("premium_cpa");
             } else if (wp_id == 4) {
                 updated_price_container.attr("data-program-price", "rev_share");
-                updated_price_container.html("Rev Share");
+                updated_price_container.html("rev_share");
             } else {
                 updated_price_container.attr("data-program-price", "regular_cpa");
-                updated_price_container.html("Regular CPA");
+                updated_price_container.html("regular_cpa");
             }
 
             var id = $(this).closest('.cell-data-container').attr("data-id");
@@ -305,7 +317,7 @@
             var tr = $(this).closest("tr");
             var id = $(this).attr("data-id");
             var wp_id = tr.find(".wp-list").val();
-            var program_price = tr.find(".updated_price_name > .cell-data-container").attr("data-program-price");
+            var program_price = tr.find(".updated_price_program > .cell-data-container").attr("data-program-price");
 
             tr.attr("data-id", id);
 
@@ -371,6 +383,10 @@
                     });
         });
 
+        $("#undesirable_affiliates").on("click", ".btn-country-info", function(){
+            $(".navbar-preloader").show(300);
+        });
+
         function showUndesirableAffiliateHistory(history, tr) {
             var rows_to_show = [
                 'aff_price',
@@ -382,7 +398,7 @@
                 'gross_margin_126',
                 'num_disputes_126',
                 'desirability_scores',
-                'updated_price_name',
+                'updated_price_program',
                 'workout_set_date',
                 'workout_duration',
                 'program_status',

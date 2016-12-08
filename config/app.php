@@ -11,7 +11,7 @@ return [
     | any other location as required by the application or its packages.
     */
 
-    'name' => 'Desirability Review - Huyna',
+    'name' => 'Desirability Review - Hyuna',
 
     /*
     |--------------------------------------------------------------------------
@@ -50,8 +50,7 @@ return [
     |
     */
 
-//    'url' => env('APP_URL', 'http://localhost'),
-    'url' => env('APP_URL', 'http://10.0.10.84'),
+    'url' => env('APP_URL', 'http://localhost'),
 
     /*
     |--------------------------------------------------------------------------

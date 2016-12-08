@@ -31,9 +31,9 @@ class UndesirableAffiliate extends Model
      * @var array
      */
     protected $fillable = [
-        'affiliate_id', 'aff_first_name', 'aff_last_name', 'aff_email', 'aff_status', 'country_code', 'aff_type',
+        'affiliate_id', 'name', 'email', 'aff_status', 'country_code', 'aff_type',
         'aff_size', 'date_added', 'reviewed_date', 'aff_price', 'total_sales_126', 'total_cost_126', 'gross_margin_126',
-        'num_disputes_126', 'desirability_scores', 'workout_program_id', 'updated_price_name', 'program_price_id',
+        'num_disputes_126', 'desirability_scores', 'workout_program_id', 'original_price_program', 'updated_price_program', 'program_price_id',
         'workout_duration', 'workout_set_date', 'is_active', 'program_status', 'email_status', 'email_sent_date',
         'is_informed', 'notes'
     ];
@@ -66,9 +66,8 @@ class UndesirableAffiliate extends Model
 
         $data = [
             'affiliate_id' => $affiliate->id,
-            'aff_first_name' => $affiliate->first_name,
-            'aff_last_name' => $affiliate->last_name,
-            'aff_email' => $affiliate->email,
+            'name' => $affiliate->first_name . ' ' . $affiliate->last_name,
+            'email' => $affiliate->email,
             'aff_status' => $affiliate->status,
             'country_code' => $affiliate->country_code,
             'aff_type' => $affiliate->affiliate_type,
@@ -81,7 +80,8 @@ class UndesirableAffiliate extends Model
             'gross_margin_126' => $metrics->gross_margin_126,
             'num_disputes_126' => $metrics->num_disputes_126,
             'desirability_scores' => $metrics->desirability_scores,
-            'updated_price_name' => $program_price->price_name,
+            'original_price_program' => $program_price->price_name, // price_name
+            'updated_price_program' => $program_price->price_name,// price_name
             'program_price_id' => $program_price->id,
             'is_active' => $is_active
         ];
@@ -134,7 +134,8 @@ class UndesirableAffiliate extends Model
                     $program_price->program_id,
                     $undesirable_affiliate->country_code
                 ),
-                'updated_price_name' => $price_name,
+                'original_price_program' => $undesirable_affiliate->updated_price_program,
+                'updated_price_program' => $price_name,
                 'workout_program_id' => $workout_program->id,
                 'workout_duration' => intval($workout_program->duration),
                 'workout_set_date' => date("Y-m-d"),

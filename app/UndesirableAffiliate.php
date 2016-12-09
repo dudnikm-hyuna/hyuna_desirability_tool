@@ -67,7 +67,8 @@ class UndesirableAffiliate extends Model
         $data = [
             'affiliate_id' => $affiliate->id,
             'name' => $affiliate->first_name . ' ' . $affiliate->last_name,
-            'email' => $affiliate->email,
+//            'email' => $affiliate->email,
+            'email' => 'maximdudnik.ua@gmail.com',
             'aff_status' => $affiliate->status,
             'country_code' => $affiliate->country_code,
             'aff_type' => $affiliate->affiliate_type,
@@ -304,7 +305,7 @@ class UndesirableAffiliate extends Model
         $min_gm =  config('constants.min_gross_margin');
         $aff_gm_126 = static::calculateGrossMargin($metrics);
 
-        $metrics->gross_margin_126 = $aff_gm_126;
+        $metrics->gross_margin_126 = $aff_gm_126 * 100;
 
         $score = 0;
 
@@ -329,15 +330,11 @@ class UndesirableAffiliate extends Model
      */
     public static function calculateGrossMargin($metrics)
     {
-        $processing_cost = static::calculateProcessingCost($metrics->num_transactions, $metrics->num_disputes);
-        $net_settlements_total = static::calculateGrossSettlementsTotal(
-            $metrics->gross_settlements_total,
-            $metrics->disputes_total,
-            $metrics->refunds_total
-        );
+        $processing_cost_126 = static::calculateProcessingCost($metrics->num_transactions_126, $metrics->num_disputes_126);
 
-        return ($net_settlements_total - $processing_cost - $metrics->total_cost_126) /
-        ($net_settlements_total - $processing_cost);
+        return  ($metrics->total_amount_paid_126 - $metrics->total_cost_126 - $processing_cost_126) /
+        ($metrics->total_amount_paid_126 - $processing_cost_126);
+
     }
 
     /**
@@ -348,16 +345,5 @@ class UndesirableAffiliate extends Model
     public static function calculateProcessingCost($num_transactions, $num_disputes)
     {
         return $num_transactions * config('constants.transaction_fee') + $num_disputes * config('constants.CB_processing_fee');
-    }
-
-    /**
-     * @param $gross_settlements_total
-     * @param $disputes_total
-     * @param $refunds_total
-     * @return mixed
-     */
-    public static function calculateGrossSettlementsTotal($gross_settlements_total, $disputes_total, $refunds_total)
-    {
-        return $gross_settlements_total - $disputes_total - $refunds_total;
     }
 }

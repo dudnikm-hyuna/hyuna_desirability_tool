@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -92,12 +93,12 @@ class DesirabilityToolController extends Controller
     public function sendEmail($id)
     {
         $undesirable_affiliate = UndesirableAffiliate::find($id);
-//        $message = (new AffiliateNotified($undesirable_affiliate))
-//            ->onConnection('redis')
-//            ->onQueue('emails');
+        $message = (new AffiliateNotified($undesirable_affiliate))
+            ->onConnection('redis')
+            ->onQueue('emails');
 
-//        Mail::to($undesirable_affiliate)
-//            ->queue($message);
+        Mail::to($undesirable_affiliate)
+            ->queue($message);
 
         $data = [
             'email_sent_date' => date("Y-m-d H:i:s"),
@@ -115,11 +116,9 @@ class DesirabilityToolController extends Controller
 
         $query = "SELECT    affiliate_id,
                             SUM(stats.num_transactions) AS num_transactions,
-                            SUM(stats.gross_settlements_total) AS gross_settlements_total,
-                            SUM(stats.disputes_total) AS disputes_total,
-                            SUM(stats.refunds_total) AS refunds_total,
+                            SUM(stats.num_transactions_126) AS num_transactions_126,
+                            SUM(stats.total_amount_paid_126) AS total_amount_paid_126,
                             SUM(stats.total_cost) AS total_cost,
-                            SUM(stats.num_disputes) AS num_disputes,
                             SUM(stats.num_disputes_126) AS num_disputes_126,
                             SUM(stats.total_cost_126) AS total_cost_126,
                             SUM(stats.total_sales_126) AS total_sales_126
@@ -128,11 +127,9 @@ class DesirabilityToolController extends Controller
                       SELECT
                             stats_m.member_id as member_id,
                             COUNT(CASE WHEN transaction_type NOT IN ('auth', 'void') THEN transaction_id END) AS num_transactions,
-                            SUM(CASE WHEN (transaction_type IN ('sale', 'capture') AND ( status = 'success' OR status = 'refunded' ) AND payout_amount > 0 ) THEN transaction_amount ELSE 0 END) AS gross_settlements_total,
-                            SUM(CASE WHEN dispute_type = 'chargeback' THEN dispute_amount ELSE 0 END) AS disputes_total,
-                            SUM(CASE WHEN (transaction_type = 'refund') THEN ABS(transaction_amount) ELSE 0 END) AS refunds_total,
+                            SUM(CASE WHEN ( start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 AND (issue_date - start_date <= :days_126) AND transaction_type NOT IN ('auth', 'void') ) THEN 1 ELSE 0 END) AS num_transactions_126,
+                            SUM(CASE WHEN ( start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 AND (issue_date - start_date <= :days_126) AND transaction_type IN ('sale', 'capture') AND stats_t.status = 'success'  AND payout_amount > 0 ) THEN transaction_amount - dispute_amount ELSE 0 END) AS total_amount_paid_126,
                             SUM(DISTINCT CASE WHEN payout_amount > 0 THEN payout_amount ELSE 0 END) AS total_cost,
-                            SUM(CASE WHEN (transaction_type = 'refund') THEN 1 ELSE 0 END) AS num_refunds, SUM(CASE WHEN dispute_type = 'chargeback' THEN 1 ELSE 0 END) AS num_disputes,
                             SUM(CASE WHEN (dispute_type = 'chargeback' AND (start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126) AND (dispute_date - issue_date <= :days_126)) THEN 1 ELSE 0 END) AS num_disputes_126,
                             SUM(DISTINCT CASE WHEN ( payout_amount > 0 AND start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 ) THEN payout_amount ELSE 0 END) AS total_cost_126,
                             COUNT(DISTINCT CASE WHEN ( start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 AND payout_amount > 0 ) THEN stats_m.member_id END) AS total_sales_126
@@ -141,7 +138,7 @@ class DesirabilityToolController extends Controller
                         WHERE issue_date >= :start_time
                         AND stats_t.site_id <> 813
                         AND affiliate_id <> 0
-                        AND affiliate_id IN(" . $affiliate_ids . ")
+                        AND affiliate_id IN (" . $affiliate_ids . ")
                       GROUP BY stats_m.member_id
                 ) stats ON m.member_id = stats.member_id
                 WHERE m.start_date BETWEEN :start_time AND :end_time
@@ -149,11 +146,18 @@ class DesirabilityToolController extends Controller
                 AND affiliate_id <> 0
                 GROUP BY affiliate_id"; //todo set appropriate filters and params
 
-        $end_date = date('Y-m-d', strtotime("-126 days"));
-        $start_date = date('Y-m-d', strtotime("-156 days"));
-
-        $start_time = strtotime(date('Y-m-d 02:00:00', strtotime($start_date)));
-        $end_time = strtotime(date('Y-m-d 23:59:59', strtotime($end_date)));
+        $start_time = Carbon::now(config('app.timezone'))
+            ->subDays(156)
+            ->hour(0)
+            ->minute(0)
+            ->second(0)
+            ->timestamp;
+        $end_time = Carbon::now(config('app.timezone'))
+            ->subDays(126)
+            ->hour(23)
+            ->minute(59)
+            ->second(59)
+            ->timestamp;
 
         $params = array(
             ":start_time" => $start_time,
@@ -205,11 +209,9 @@ class DesirabilityToolController extends Controller
     {
         $query = "SELECT    country_code,
                             SUM(stats.num_transactions) AS num_transactions,
-                            SUM(stats.gross_settlements_total) AS gross_settlements_total,
-                            SUM(stats.disputes_total) AS disputes_total,
-                            SUM(stats.refunds_total) AS refunds_total,
+                            SUM(stats.num_transactions_126) AS num_transactions_126,
+                            SUM(stats.total_amount_paid_126) AS total_amount_paid_126,
                             SUM(stats.total_cost) AS total_cost,
-                            SUM(stats.num_disputes) AS num_disputes,
                             SUM(stats.num_disputes_126) AS num_disputes_126,
                             SUM(stats.total_cost_126) AS total_cost_126,
                             SUM(stats.total_sales_126) AS total_sales_126
@@ -218,11 +220,9 @@ class DesirabilityToolController extends Controller
                       SELECT
                             stats_m.member_id as member_id,
                             COUNT(CASE WHEN transaction_type NOT IN ('auth', 'void') THEN transaction_id END) AS num_transactions,
-                            SUM(CASE WHEN (transaction_type IN ('sale', 'capture') AND ( status = 'success' OR status = 'refunded' ) AND payout_amount > 0 ) THEN transaction_amount ELSE 0 END) AS gross_settlements_total,
-                            SUM(CASE WHEN dispute_type = 'chargeback' THEN dispute_amount ELSE 0 END) AS disputes_total,
-                            SUM(CASE WHEN (transaction_type = 'refund') THEN ABS(transaction_amount) ELSE 0 END) AS refunds_total,
+                            SUM(CASE WHEN ( start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 AND (issue_date - start_date <= :days_126) AND transaction_type NOT IN ('auth', 'void') ) THEN 1 ELSE 0 END) AS num_transactions_126,
+                            SUM(CASE WHEN ( start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 AND (issue_date - start_date <= :days_126) AND transaction_type IN ('sale', 'capture') AND stats_t.status = 'success'  AND payout_amount > 0 ) THEN transaction_amount - dispute_amount ELSE 0 END) AS total_amount_paid_126,
                             SUM(DISTINCT CASE WHEN payout_amount > 0 THEN payout_amount ELSE 0 END) AS total_cost,
-                            SUM(CASE WHEN (transaction_type = 'refund') THEN 1 ELSE 0 END) AS num_refunds, SUM(CASE WHEN dispute_type = 'chargeback' THEN 1 ELSE 0 END) AS num_disputes,
                             SUM(CASE WHEN (dispute_type = 'chargeback' AND (start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126) AND (dispute_date - issue_date <= :days_126)) THEN 1 ELSE 0 END) AS num_disputes_126,
                             SUM(DISTINCT CASE WHEN ( payout_amount > 0 AND start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 ) THEN payout_amount ELSE 0 END) AS total_cost_126,
                             COUNT(DISTINCT CASE WHEN ( start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 AND payout_amount > 0 ) THEN stats_m.member_id END) AS total_sales_126
@@ -240,11 +240,18 @@ class DesirabilityToolController extends Controller
                 GROUP BY country_code
                 ORDER BY num_transactions DESC LIMIT 6"; //todo set appropriate filters and params
 
-        $end_date = date('Y-m-d', strtotime("-126 days"));
-        $start_date = date('Y-m-d', strtotime("-156 days"));
-
-        $start_time = strtotime(date('Y-m-d 02:00:00', strtotime($start_date)));
-        $end_time = strtotime(date('Y-m-d 23:59:59', strtotime($end_date)));
+        $start_time = Carbon::now(config('app.timezone'))
+            ->subDays(156)
+            ->hour(0)
+            ->minute(0)
+            ->second(0)
+            ->timestamp;
+        $end_time = Carbon::now(config('app.timezone'))
+            ->subDays(126)
+            ->hour(23)
+            ->minute(59)
+            ->second(59)
+            ->timestamp;
 
         $params = array(
             ":affiliate_id" => $affiliate_id,
@@ -257,7 +264,7 @@ class DesirabilityToolController extends Controller
 
         $affiliate_country_data = DB::connection('redshift_prod')->select($query);
 
-        foreach ($affiliate_country_data as $metrics) {
+        foreach ($affiliate_country_data as $key => $metrics) {
             UndesirableAffiliate::calculateDesirabilityScore($metrics);
         }
 

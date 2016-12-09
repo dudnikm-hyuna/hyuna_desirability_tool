@@ -147,7 +147,7 @@
                 },
                 { // gross_margin_126
                     "render": function (data, type, row) {
-                        return '<span class="cell-data-container">' + parseFloat((data*100).toFixed(2)) + '%' + '</span>';
+                        return '<span class="cell-data-container">' + parseFloat((+data).toFixed(2)) + '%' + '</span>';
                     },
                     "targets": 11
                 },

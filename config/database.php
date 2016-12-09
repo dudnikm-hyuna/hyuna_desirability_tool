@@ -92,9 +92,9 @@ return [
             'prefix' => '',
             'strict' => false,
             'engine' => null,
-            'options'   => array(
-                PDO::MYSQL_ATTR_SSL_CA    => '/etc/jomedia/mysql-certs/ca-cert.pem'
-            ),
+//            'options'   => array(
+//                PDO::MYSQL_ATTR_SSL_CA    => '/etc/jomedia/mysql-certs/ca-cert.pem'
+//            ),
         ],
 
         'redshift' => [

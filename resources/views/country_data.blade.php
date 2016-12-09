@@ -48,7 +48,7 @@
                     <td>{{ $row->country_code }}</td>
                     <td>{{ $row->total_sales_126 }}</td>
                     <td>${{ $row->total_cost_126 }}</td>
-                    <td>{{ round($row->gross_margin_126*100, 2) }}%</td>
+                    <td>{{ round($row->gross_margin_126, 2) }}%</td
                     <td>{{ $row->num_disputes_126 }}</td>
                     <td>{{ $row->desirability_scores }}</td>
                 </tr>

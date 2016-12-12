@@ -13,7 +13,7 @@
                 <th>Affiliate Size</th>
                 <th>Date Added</th>
                 <th>Review Date</th>
-                <th>Avg CPS</th>
+                <th>CPS</th>
                 <th>Total Sales 126</th>
                 <th>Total Cost 126</th>
                 <th>Gross Margin 126</th>
@@ -141,7 +141,7 @@
                 },
                 { // affilaite price (Avg CPS), total_cost_126
                     "render": function (data, type, row) {
-                        return '<span class="cell-data-container">$' + data + '</span>';
+                        return '<span class="cell-data-container">$' + parseInt(data).toFixed(2) + '</span>';
                     },
                     "targets": [8,10]
                 },
@@ -177,11 +177,22 @@
                     },
                     "targets": 14
                 },
-                { //updated price name
+                { //updated price program
                     "render": function (data, type, row) {
-                        return '<span class="cell-data-container" data-program-price=' + data + '>' + data + '</span>';
+                        if (data) {
+                            return '<span class="cell-data-container" data-program-price=' + data + '>' + data + '</span>';
+                        } else {
+                            return '<span class="cell-data-container">-</span>';
+                        }
                     },
                     "targets": 16
+                },
+                { //workout duration
+                    "render": function (data, type, row) {
+                        var duration = (data < 0) ? '&#8734;' : data;
+                        return '<span class="cell-data-container">' + duration + '</span>';
+                    },
+                    "targets": 17
                 },
                 { // program status
                     "render": function (data, type, row) {
@@ -287,8 +298,9 @@
             $(this).closest(".cell-data-container").removeClass().addClass("cell-data-container wp_" + wp_id);
 
             if (wp_id == 3) {
+                updated_price_container.attr("data-program-price", "regular_cpa");
                 updated_price_container.html('<select class="price-program-list">' +
-                        '<option value="regular_cpa">regular_cpa</option>' +
+                        '<option value="regular_cpa" selected>regular_cpa</option>' +
                         '<option value="premium_cpa">premium_cpa</option>' +
                         '<option value="spu">spu</option>' +
                         '</select>');

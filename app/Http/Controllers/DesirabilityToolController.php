@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -117,59 +116,10 @@ class DesirabilityToolController extends Controller
     public function cron()
     {
         $affiliate_ids = Affiliate::findAffiliatesIdForReview();
+        $grouping = "affiliate_id";
+        $extra_where = "AND affiliate_id IN (" . $affiliate_ids . ")";
 
-        $query = "SELECT    affiliate_id,
-                            SUM(stats.num_transactions) AS num_transactions,
-                            SUM(stats.num_transactions_126) AS num_transactions_126,
-                            SUM(stats.total_amount_paid_126) AS total_amount_paid_126,
-                            SUM(stats.total_cost) AS total_cost,
-                            SUM(stats.num_disputes_126) AS num_disputes_126,
-                            SUM(stats.total_cost_126) AS total_cost_126,
-                            SUM(stats.total_sales_126) AS total_sales_126
-                FROM jomedia.members m
-                JOIN (
-                      SELECT
-                            stats_m.member_id as member_id,
-                            COUNT(CASE WHEN transaction_type NOT IN ('auth', 'void') THEN transaction_id END) AS num_transactions,
-                            SUM(CASE WHEN ( start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 AND (issue_date - start_date <= :days_126) AND transaction_type NOT IN ('auth', 'void') ) THEN 1 ELSE 0 END) AS num_transactions_126,
-                            SUM(CASE WHEN ( start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 AND (issue_date - start_date <= :days_126) AND transaction_type IN ('sale', 'capture') AND stats_t.status = 'success'  AND payout_amount > 0 ) THEN transaction_amount - dispute_amount ELSE 0 END) AS total_amount_paid_126,
-                            SUM(DISTINCT CASE WHEN payout_amount > 0 THEN payout_amount ELSE 0 END) AS total_cost,
-                            SUM(CASE WHEN (dispute_type = 'chargeback' AND (start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126) AND (dispute_date - issue_date <= :days_126)) THEN 1 ELSE 0 END) AS num_disputes_126,
-                            SUM(DISTINCT CASE WHEN ( payout_amount > 0 AND start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 ) THEN payout_amount ELSE 0 END) AS total_cost_126,
-                            COUNT(DISTINCT CASE WHEN ( start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 AND payout_amount > 0 ) THEN stats_m.member_id END) AS total_sales_126
-                      FROM  jomedia.members stats_m
-                      JOIN jomedia.transactions stats_t ON stats_t.member_id = stats_m.member_id
-                        WHERE issue_date >= :start_time
-                        AND stats_t.site_id <> 813
-                        AND affiliate_id <> 0
-                        AND affiliate_id IN (" . $affiliate_ids . ")
-                      GROUP BY stats_m.member_id
-                ) stats ON m.member_id = stats.member_id
-                WHERE m.start_date BETWEEN :start_time AND :end_time
-                AND m.site_id <> 813
-                AND affiliate_id <> 0
-                GROUP BY affiliate_id"; //todo set appropriate filters and params
-
-        $start_time = Carbon::now(config('app.timezone'))
-            ->subDays(156)
-            ->hour(0)
-            ->minute(0)
-            ->second(0)
-            ->timestamp;
-        $end_time = Carbon::now(config('app.timezone'))
-            ->subDays(126)
-            ->hour(23)
-            ->minute(59)
-            ->second(59)
-            ->timestamp;
-
-        $params = array(
-            ":start_time" => $start_time,
-            ":end_time" => $end_time,
-            ":days_126" => 126 * 86400,
-        );
-
-        $query = static::prepareQuery($query, $params);
+        $query = UndesirableAffiliate::prepareQuery($grouping, $extra_where);
 
         $affiliates_initial_metrics = DB::connection('redshift_prod')->select($query);
 
@@ -192,79 +142,13 @@ class DesirabilityToolController extends Controller
         die();
     }
 
-
-    /**
-     * Replace the bindings with their real value for the query.
-     *
-     * @param string $query The query.
-     * @param array $bindings The list of bindings.
-     *
-     * @return string
-     */
-    private static function prepareQuery($query, $bindings)
-    {
-        foreach ($bindings as $name => $value) {
-            $query = str_replace($name, $value, $query);
-        }
-        return $query;
-    }
-
     public function getStatsByCountry($affiliate_id)
     {
-        $query = "SELECT    country_code,
-                            SUM(stats.num_transactions) AS num_transactions,
-                            SUM(stats.num_transactions_126) AS num_transactions_126,
-                            SUM(stats.total_amount_paid_126) AS total_amount_paid_126,
-                            SUM(stats.total_cost) AS total_cost,
-                            SUM(stats.num_disputes_126) AS num_disputes_126,
-                            SUM(stats.total_cost_126) AS total_cost_126,
-                            SUM(stats.total_sales_126) AS total_sales_126
-                FROM jomedia.members m
-                JOIN (
-                      SELECT
-                            stats_m.member_id as member_id,
-                            COUNT(CASE WHEN transaction_type NOT IN ('auth', 'void') THEN transaction_id END) AS num_transactions,
-                            SUM(CASE WHEN ( start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 AND (issue_date - start_date <= :days_126) AND transaction_type NOT IN ('auth', 'void') ) THEN 1 ELSE 0 END) AS num_transactions_126,
-                            SUM(CASE WHEN ( start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 AND (issue_date - start_date <= :days_126) AND transaction_type IN ('sale', 'capture') AND stats_t.status = 'success'  AND payout_amount > 0 ) THEN transaction_amount - dispute_amount ELSE 0 END) AS total_amount_paid_126,
-                            SUM(DISTINCT CASE WHEN payout_amount > 0 THEN payout_amount ELSE 0 END) AS total_cost,
-                            SUM(CASE WHEN (dispute_type = 'chargeback' AND (start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126) AND (dispute_date - issue_date <= :days_126)) THEN 1 ELSE 0 END) AS num_disputes_126,
-                            SUM(DISTINCT CASE WHEN ( payout_amount > 0 AND start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 ) THEN payout_amount ELSE 0 END) AS total_cost_126,
-                            COUNT(DISTINCT CASE WHEN ( start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 AND payout_amount > 0 ) THEN stats_m.member_id END) AS total_sales_126
-                      FROM  jomedia.members stats_m
-                      JOIN jomedia.transactions stats_t ON stats_t.member_id = stats_m.member_id
-                        WHERE issue_date >= :start_time
-                        AND stats_t.site_id <> 813
-                        AND affiliate_id <> 0
-                        AND affiliate_id = :affiliate_id
-                      GROUP BY stats_m.member_id
-                ) stats ON m.member_id = stats.member_id
-                WHERE m.start_date BETWEEN :start_time AND :end_time
-                AND m.site_id <> 813
-                AND affiliate_id <> 0
-                GROUP BY country_code
-                ORDER BY num_transactions DESC LIMIT 6"; //todo set appropriate filters and params
+        $grouping = "country_code";
+        $extra_where = "AND affiliate_id = " . $affiliate_id;
+        $order_by = " ORDER BY num_transactions DESC LIMIT 6";
 
-        $start_time = Carbon::now(config('app.timezone'))
-            ->subDays(156)
-            ->hour(0)
-            ->minute(0)
-            ->second(0)
-            ->timestamp;
-        $end_time = Carbon::now(config('app.timezone'))
-            ->subDays(126)
-            ->hour(23)
-            ->minute(59)
-            ->second(59)
-            ->timestamp;
-
-        $params = array(
-            ":affiliate_id" => $affiliate_id,
-            ":start_time" => $start_time,
-            ":end_time" => $end_time,
-            ":days_126" => 126 * 86400,
-        );
-
-        $query = static::prepareQuery($query, $params);
+        $query = UndesirableAffiliate::prepareQuery($grouping, $extra_where, $order_by);
 
         $affiliate_country_data = DB::connection('redshift_prod')->select($query);
 

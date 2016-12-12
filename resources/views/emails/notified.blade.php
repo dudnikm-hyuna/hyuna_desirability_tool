@@ -68,7 +68,7 @@
 <div class="flex-center position-ref full-height">
       <div class="content">
         <div class="title m-b-md">
-            Hi,  {{ $undesirableAffiliate->aff_last_name }}
+            Hi,  {{ $undesirableAffiliate->name }}
         </div>
     </div>
 </div>

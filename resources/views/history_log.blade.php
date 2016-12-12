@@ -35,7 +35,7 @@
             <thead>
             <tr>
                 <th>Review Date</th>
-                <th>Affiliate Price</th>
+                <th>CPS</th>
                 <th>Total Sales 126</th>
                 <th>Total Cost 126</th>
                 <th>Gross Margin 126</th>
@@ -62,7 +62,7 @@
                     <td class="wp_{{ $row->workout_program_id }}">{{ $row->workout_program_id }}</td>
                     <td>{{ $row->original_price_program }}</td>
                     <td>{{ $row->updated_price_program }}</td>
-                    <td>{{ $row->workout_duration }}</td>
+                    <td>{{ ($row->workout_duration == -1) ? '&#8734;' : $row->workout_duration  }}</td>
                     <td>{{ $row->workout_set_date }}</td>
                     <td>{{ $row->program_status }}</td>
                 </tr>

@@ -37,6 +37,7 @@
                 <th>Country</th>
                 <th>Total Sales 126</th>
                 <th>Total Cost 126</th>
+                <th>Avg CPS</th>
                 <th>Gross Margin 126</th>
                 <th>Num Disputes 126</th>
                 <th>Desirability Score</th>
@@ -48,6 +49,7 @@
                     <td>{{ $row->country_code }}</td>
                     <td>{{ $row->total_sales_126 }}</td>
                     <td>${{ $row->total_cost_126 }}</td>
+                    <td>${{ $row->total_cost_126 / $row->total_sales_126 }}</td>
                     <td>{{ round($row->gross_margin_126, 2) }}%</td>
                     <td>{{ $row->num_disputes_126 }}</td>
                     <td>{{ $row->desirability_scores }}</td>

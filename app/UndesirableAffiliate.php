@@ -2,6 +2,8 @@
 
 namespace App;
 
+use Carbon\Carbon;
+
 use Illuminate\Database\Eloquent\Model;
 
 use App\Affiliate;
@@ -81,8 +83,8 @@ class UndesirableAffiliate extends Model
             'gross_margin_126' => $metrics->gross_margin_126,
             'num_disputes_126' => $metrics->num_disputes_126,
             'desirability_scores' => $metrics->desirability_scores,
-            'original_price_program' => $program_price->price_name, // price_name
-            'updated_price_program' => $program_price->price_name,// price_name
+            'original_price_program' => $program_price->price_name,
+//            'updated_price_program' => $program_price->price_name,
             'program_price_id' => $program_price->id,
             'is_active' => $is_active
         ];
@@ -135,7 +137,6 @@ class UndesirableAffiliate extends Model
                     $program_price->program_id,
                     $undesirable_affiliate->country_code
                 ),
-                'original_price_program' => $undesirable_affiliate->updated_price_program,
                 'updated_price_program' => $price_name,
                 'workout_program_id' => $workout_program->id,
                 'workout_duration' => intval($workout_program->duration),
@@ -345,5 +346,69 @@ class UndesirableAffiliate extends Model
     public static function calculateProcessingCost($num_transactions, $num_disputes)
     {
         return $num_transactions * config('constants.transaction_fee') + $num_disputes * config('constants.CB_processing_fee');
+    }
+
+    /**
+     * @param $grouping
+     * @param $extra_where
+     * @param string $order_by
+     * @return mixed|string
+     */
+    protected static function prepareQuery($grouping, $extra_where, $order_by = '')
+    {
+        $query = "SELECT    " . $grouping . ",
+                            SUM(stats.num_transactions) AS num_transactions,
+                            SUM(stats.num_transactions_126) AS num_transactions_126,
+                            SUM(stats.total_amount_paid_126) AS total_amount_paid_126,
+                            SUM(stats.total_cost) AS total_cost,
+                            SUM(stats.num_disputes_126) AS num_disputes_126,
+                            SUM(stats.total_cost_126) AS total_cost_126,
+                            SUM(stats.total_sales_126) AS total_sales_126
+                FROM jomedia.members m
+                JOIN (
+                      SELECT
+                            stats_m.member_id as member_id,
+                            COUNT(CASE WHEN transaction_type NOT IN ('auth', 'void') THEN transaction_id END) AS num_transactions,
+                            SUM(CASE WHEN ( start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 AND (issue_date - start_date <= :days_126) AND transaction_type NOT IN ('auth', 'void') ) THEN 1 ELSE 0 END) AS num_transactions_126,
+                            SUM(CASE WHEN ( start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 AND (issue_date - start_date <= :days_126) AND transaction_type IN ('sale', 'capture') AND stats_t.status = 'success'  AND payout_amount > 0 ) THEN transaction_amount - dispute_amount ELSE 0 END) AS total_amount_paid_126,
+                            SUM(DISTINCT CASE WHEN payout_amount > 0 THEN payout_amount ELSE 0 END) AS total_cost,
+                            SUM(CASE WHEN (dispute_type = 'chargeback' AND (start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126) AND (dispute_date - issue_date <= :days_126)) THEN 1 ELSE 0 END) AS num_disputes_126,
+                            SUM(DISTINCT CASE WHEN ( payout_amount > 0 AND start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 ) THEN payout_amount ELSE 0 END) AS total_cost_126,
+                            COUNT(DISTINCT CASE WHEN ( start_date <= EXTRACT(EPOCH FROM SYSDATE)::INT - :days_126 AND payout_amount > 0 ) THEN stats_m.member_id END) AS total_sales_126
+                      FROM  jomedia.members stats_m
+                      JOIN jomedia.transactions stats_t ON stats_t.member_id = stats_m.member_id
+                        WHERE issue_date >= :start_time
+                        AND stats_t.site_id <> 813
+                        AND affiliate_id <> 0
+                        " . $extra_where . "
+                      GROUP BY stats_m.member_id
+                ) stats ON m.member_id = stats.member_id
+                WHERE m.start_date BETWEEN :start_time AND :end_time
+                AND m.site_id <> 813
+                AND affiliate_id <> 0
+                GROUP BY " . $grouping . $order_by;
+
+        $start_time = Carbon::now(config('app.timezone'))
+            ->subDays(156)
+            ->hour(0)
+            ->minute(0)
+            ->second(0)
+            ->timestamp;
+        $end_time = Carbon::now(config('app.timezone'))
+            ->subDays(126)
+            ->hour(23)
+            ->minute(59)
+            ->second(59)
+            ->timestamp;
+        $params = array(
+            ":start_time" => $start_time,
+            ":end_time" => $end_time,
+            ":days_126" => 126 * 86400,
+        );
+
+        foreach ($params as $name => $value) {
+            $query = str_replace($name, $value, $query);
+        }
+        return $query;
     }
 }

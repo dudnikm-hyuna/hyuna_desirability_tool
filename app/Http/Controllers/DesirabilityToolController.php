@@ -269,6 +269,11 @@ class DesirabilityToolController extends Controller
         $affiliate_country_data = DB::connection('redshift_prod')->select($query);
 
         foreach ($affiliate_country_data as $key => $metrics) {
+            if (!$metrics->num_transactions_126) {
+                unset($affiliate_country_data[$key]);
+                continue;
+            }
+
             UndesirableAffiliate::calculateDesirabilityScore($metrics);
         }
 

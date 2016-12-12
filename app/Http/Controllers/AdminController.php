@@ -18,6 +18,7 @@ class AdminController extends Controller
      */
     public function __construct()
     {
+        $this->middleware('auth');
         $this->middleware('admin');
     }
 
@@ -37,9 +38,10 @@ class AdminController extends Controller
         return Datatables::eloquent(User::where('id', '<>', Auth::user()->id))->make(true);
     }
 
-    public function changeUserRole($id, $is_admin)
+    public function changeUserRole($id, $is_manager)
     {
-        $user = User::find($id)->fill(['is_admin' => $is_admin]);
+        $role = ($is_manager == 1) ? 'manager' : 'user';
+        $user = User::find($id)->fill(['role' => $role]);
 
         return ($user->update()) ? $user : false;
     }

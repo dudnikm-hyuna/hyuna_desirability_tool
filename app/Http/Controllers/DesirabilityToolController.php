@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 use App\Affiliate;
 use App\UndesirableAffiliate;
@@ -29,7 +30,10 @@ class DesirabilityToolController extends Controller
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View
      */
     public function index()
-    {
+    {   if (!Auth::user()->isManager()) {
+            return view('not_allowed');
+        }
+
         return view('tool');
     }
 

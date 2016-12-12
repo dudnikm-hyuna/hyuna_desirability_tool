@@ -36,7 +36,7 @@ class AffiliateNotified extends Mailable
      */
     public function build()
     {
-        return $this->from('maximdudnik.ua@gmail.com')
+        return $this->from('test@mail.com')
             ->view('emails.notified');
     }
 }

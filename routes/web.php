@@ -28,4 +28,4 @@ Route::get('/undesirable-affiliate/{id}', 'DesirabilityToolController@getUndesir
 
 Route::get('/administration', 'AdminController@index');
 Route::get('/users-data', 'AdminController@getUsersData');
-Route::get('/change-user-role/{id}/{is_admin}', 'AdminController@changeUserRole');
+Route::get('/change-user-role/{id}/{is_manager}', 'AdminController@changeUserRole');

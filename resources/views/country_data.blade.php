@@ -19,7 +19,7 @@
             </thead>
             <tbody>
             <tr>
-                <td>{{ $affiliate['aff_first_name'] }} {{ $affiliate['aff_last_name'] }}</td>
+                <td>{{ $affiliate['name'] }}</td>
                 <td>{{ $affiliate['affiliate_id'] }}</td>
                 <td>{{ $affiliate['date_added'] }}</td>
                 <td>{{ $affiliate['country_code'] }}</td>
@@ -48,7 +48,7 @@
                     <td>{{ $row->country_code }}</td>
                     <td>{{ $row->total_sales_126 }}</td>
                     <td>${{ $row->total_cost_126 }}</td>
-                    <td>{{ round($row->gross_margin_126, 2) }}%</td
+                    <td>{{ round($row->gross_margin_126, 2) }}%</td>
                     <td>{{ $row->num_disputes_126 }}</td>
                     <td>{{ $row->desirability_scores }}</td>
                 </tr>
